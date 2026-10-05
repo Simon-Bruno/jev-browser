@@ -67,7 +67,7 @@ test('close help is available without login and explains session selection', t =
   const { run } = fixture(t);
   const result = run(['--help']);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /close <会话名>/);
+  assert.match(result.stdout, /close <session name>/);
   assert.match(result.stdout, /session clear/);
   assert.doesNotMatch(result.stdout, /--all/);
   const subcommand = run(['session', 'close', 'demo', '--help']);
@@ -96,7 +96,7 @@ test('session clear routes to close all and rejects operands before login', t =>
     const result = run(args);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /jev-browser session clear/);
-    assert.match(result.stdout, /关闭全部/);
+    assert.match(result.stdout, /close all/i);
   }
 });
 

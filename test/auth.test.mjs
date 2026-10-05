@@ -194,13 +194,13 @@ test('CLI detects providers, prompts before execution, resumes once and preserve
     assert.equal(readCredentials(env)[provider], key);
     const plain = run(['auth', 'login'], { TEST_KEY: key });
     assert.equal(plain.status, 0, plain.stderr);
-    assert.equal(plain.stdout, '登录成功。\n');
-    assert.equal(plain.stderr, 'API Key（输入隐藏）：\n');
+    assert.equal(plain.stdout, 'Logged in.\n');
+    assert.equal(plain.stderr, 'API key (input hidden): \n');
     rmSync(credentialsPath(env));
     const automatic = run(['--json', 'page', 'open', 'demo', 'https://example.test'], { TEST_KEY: key });
     assert.equal(automatic.status, 0, automatic.stderr);
     assert.deepEqual(JSON.parse(automatic.stdout), { executed: ['open', 'https://example.test'] });
-    assert.equal(automatic.stderr, '请先登录。\nAPI Key（输入隐藏）：\n登录成功。\n');
+    assert.equal(automatic.stderr, 'Please log in first.\nAPI key (input hidden): \nLogged in.\n');
     assert(!`${automatic.stdout}${automatic.stderr}`.includes(key));
     assert.equal(readCredentials(env)[provider], key);
     const saved = run(['page', 'snapshot', 'demo', '--json']);
@@ -223,7 +223,7 @@ test('CLI detects providers, prompts before execution, resumes once and preserve
     const result = run(args);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /auth login/);
-    assert.doesNotMatch(result.stdout, /sh-|sk-|自动识别|最小|检查通过|验证/);
+    assert.doesNotMatch(result.stdout, /sh-|sk-|auto-detect|minimum|check passed|verif/);
     assert.equal(result.stderr, '');
   }
   const configured = run(['page', 'snapshot', 'demo'], { TYPESAFE_API_KEY: 'env-test' });

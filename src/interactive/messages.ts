@@ -21,5 +21,5 @@ export function targetLabel(target: Candidate): string {
 }
 export function needsConfirmation(plan: Plan): boolean {
   return !!plan.uncertainties.length || plan.submit || plan.operation === 'press' ||
-    /删除|移除|付款|支付|购买|下单|发布|发送|提交|确认|delete|remove|pay|purchase|buy|publish|send|submit|confirm/i.test(plan.target?.name ?? '');
+    /delete|remove|pay|purchase|buy|publish|send|submit|confirm/i.test(plan.target?.name ?? '');
 }

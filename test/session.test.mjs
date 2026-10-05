@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { withSession } from '../dist/session.js';
 
-test('同会话互斥，不同会话可用；异常后释放锁', async t => {
+test('same session is exclusive, different sessions work; lock is released after errors', async t => {
   const dir = await mkdtemp(join(tmpdir(), 'jev-lock-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   await withSession('a', async () => {

@@ -5,12 +5,12 @@ import { Jev, modelConfig, choice, noul, asChoice, validateEvaluation, accepted 
 import { coreEnv } from '../dist/browser.js';
 import { fileURLToPath } from 'node:url';
 
-const questions = { target: choice('选目标', { e1: '确认', none: '不存在' }) };
+const questions = { target: choice('Choose the target', { e1: 'confirm', none: 'Does not exist' }) };
 const valid = () => ({ model: 'jev-test', answers: { target: {
   type: 'choice', choice: 'e1', probabilities: { e1: 0.98, none: 0.02 }, confidence: 0.9,
 } } });
 
-test('四种 Key 组合与空白值；官方优先', () => {
+test('four key combinations and blank values; official provider first', () => {
   assert.throws(() => modelConfig({}), { code: 'MISSING_API_KEY' });
   assert.equal(modelConfig({ TYPESAFE_API_KEY: ' official ' }).key, 'official');
   assert.equal(modelConfig({ OPENROUTER_API_KEY: 'router' }).model, '~typesafe/jev-latest');
@@ -18,7 +18,7 @@ test('四种 Key 组合与空白值；官方优先', () => {
   assert.equal(modelConfig({ TYPESAFE_API_KEY: ' ', OPENROUTER_API_KEY: 'router' }).transport, 'openrouter');
 });
 
-test('两个通道使用实际 HTTP Decisions 协议，官方失败无切换', async t => {
+test('both channels use the real HTTP Decisions protocol; no fallback when official fails', async t => {
   const requests = [];
   const server = createServer(async (req, res) => {
     let text = ''; for await (const chunk of req) text += chunk;
@@ -32,7 +32,7 @@ test('两个通道使用实际 HTTP Decisions 协议，官方失败无切换', a
   for (const env of [{ TYPESAFE_API_KEY: 'official' }, { OPENROUTER_API_KEY: 'router' }]) {
     const config = modelConfig(env);
     const jev = new Jev(config, (url, init) => fetch(base + new URL(url).pathname, init));
-    await jev.evaluate({ instruction: '点击确认' }, questions);
+    await jev.evaluate({ instruction: 'click confirm' }, questions);
     assert.equal(jev.evidence[0].transport, config.transport);
   }
   const both = modelConfig({ TYPESAFE_API_KEY: 'bad', OPENROUTER_API_KEY: 'router' });
@@ -44,7 +44,7 @@ test('两个通道使用实际 HTTP Decisions 协议，官方失败无切换', a
   assert.equal(requests[2].auth, 'Bearer bad');
 });
 
-test('拒绝未知 ID、缺失概率、非法概率及非最高概率选择', () => {
+test('rejects unknown IDs, missing or invalid probabilities and non-top choices', () => {
   for (const mutate of [
     r => { r.answers.target.choice = 'e2'; },
     r => { delete r.answers.target.probabilities.none; },
@@ -59,13 +59,13 @@ test('拒绝未知 ID、缺失概率、非法概率及非最高概率选择', ()
   assert.equal(validateEvaluation(valid(), questions).answers.target.choice, 'e1');
 });
 
-test('概率不足不派发；模型输入超限不截断', async () => {
+test('low probability does not dispatch; oversized model input is not truncated', async () => {
   assert.throws(() => accepted({ ...valid().answers.target, probabilities: { e1: 0.6, none: 0.4 } }), { code: 'AMBIGUOUS' });
-  const jev = new Jev(modelConfig({ TYPESAFE_API_KEY: 'test' }), () => { throw Error('不应发送'); });
-  await assert.rejects(jev.evaluate('长'.repeat(20000), questions), { code: 'CONTEXT_TOO_LARGE' });
+  const jev = new Jev(modelConfig({ TYPESAFE_API_KEY: 'test' }), () => { throw Error('Should not send'); });
+  await assert.rejects(jev.evaluate('x'.repeat(60000), questions), { code: 'CONTEXT_TOO_LARGE' });
 });
 
-test('执行器不继承模型 Key 和原版运行配置', () => {
+test('executor does not inherit model keys or upstream runtime config', () => {
   const env = coreEnv({ TYPESAFE_API_KEY: 'secret1', OPENROUTER_API_KEY: 'secret2',
     AGENT_BROWSER_SOCKET_DIR: '/original', AGENT_BROWSER_DAEMON: '1',
     JEV_BROWSER_RUNTIME_DIR: '/tmp/jev-test', PATH: '/bin' });
@@ -78,8 +78,8 @@ test('执行器不继承模型 Key 和原版运行配置', () => {
   assert.equal(env.AGENT_BROWSER_SKILLS_DIR, fileURLToPath(new URL('../skills', import.meta.url)));
 });
 
-test('并行 Noul 与 Choice 响应均校验，yes/no 两端对称处理', () => {
-  const mixed = { ...questions, clear: noul('是否清空？', { true: '清空', false: '保留' }) };
+test('parallel Noul and Choice responses are both validated; yes/no handled symmetrically', () => {
+  const mixed = { ...questions, clear: noul('Clear it?', { true: 'Clear', false: 'Keep' }) };
   const result = { ...valid(), answers: { ...valid().answers, clear: { type: 'noul', noul: 0.95 } } };
   assert.equal(validateEvaluation(result, mixed).answers.clear.noul, 0.95);
   assert.equal(asChoice(result.answers.clear).choice, 'true');

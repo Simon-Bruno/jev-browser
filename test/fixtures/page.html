@@ -1,20 +1,20 @@
 <!doctype html>
 <html lang="zh-CN">
 <meta charset="utf-8">
-<title>Jev 浏览器测试页面</title>
+<title>Jev browser test page</title>
 <body>
-  <section aria-label="入住信息">
-    <h2>入住信息</h2>
-    <label>姓名<input id="name" aria-label="姓名"></label>
-    <label>密码<input id="password" type="password" aria-label="密码"></label>
-    <label><input id="agreement" type="checkbox">同意用户协议</label>
-    <label>人数<select id="people" aria-label="人数"><option value="1">1人</option><option value="2">2人</option></select></label>
-    <button id="guest-confirm" onclick="document.querySelector('#result').textContent = '入住已确认'">确认</button>
+  <section aria-label="Check-in details">
+    <h2>Check-in details</h2>
+    <label>Name<input id="name" aria-label="Name"></label>
+    <label>Password<input id="password" type="password" aria-label="Password"></label>
+    <label><input id="agreement" type="checkbox">I agree to the user agreement</label>
+    <label>Guests<select id="people" aria-label="Guests"><option value="1">1 guest</option><option value="2">2 guests</option></select></label>
+    <button id="guest-confirm" onclick="document.querySelector('#result').textContent = 'Check-in confirmed'">Confirm</button>
   </section>
-  <section aria-label="发票信息">
-    <h2>发票信息</h2>
-    <button id="invoice-confirm" onclick="document.querySelector('#result').textContent = '发票已确认'">确认</button>
+  <section aria-label="Invoice details">
+    <h2>Invoice details</h2>
+    <button id="invoice-confirm" onclick="document.querySelector('#result').textContent = 'Invoice confirmed'">Confirm</button>
   </section>
-  <p id="result" role="status" aria-label="操作结果">等待操作</p>
+  <p id="result" role="status" aria-label="Action result">Waiting for action</p>
 </body>
 </html>

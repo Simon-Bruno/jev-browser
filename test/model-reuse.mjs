@@ -2,8 +2,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { Models } from '../dist/interactive/models.js';
 import { choice } from '../dist/jev.js';
 
-const questions = { city: choice('选择用户指令中的城市', { beijing: '北京', shanghai: '上海' }) };
-const state = { instruction: '选择北京' };
+const questions = { city: choice('Choose the city in the user instruction', { beijing: 'Beijing', shanghai: 'Shanghai' }) };
+const state = { instruction: 'choose Beijing' };
 function summary(samples) {
   const ordered = samples.map(sample => sample.durationMs).sort((a, b) => a - b);
   const percentile = p => Math.round(ordered[Math.ceil(ordered.length * p) - 1]);

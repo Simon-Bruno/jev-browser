@@ -9,49 +9,49 @@ function direct(names: string): Record<string, string[]> {
 // Translate the public resource/action grammar to the existing executor protocol.
 // Browser operations and model decisions keep their existing implementations.
 export const commandGroups: Record<string, Group> = {
-  session: { description: '会话管理', actions: {
+  session: { description: 'Session management', actions: {
     list: ['session', 'list'], ls: ['session', 'list'], inspect: ['session', 'info'],
     info: ['session', 'info'], current: ['session'], id: ['session', 'id'], close: ['close'], clear: ['close', '--all'],
   } },
-  browser: { description: '浏览器连接、安装与配置', actions: {
+  browser: { description: 'Browser connection, install and configuration', actions: {
     ...direct('connect inspect install doctor upgrade'), configure: ['set'],
   } },
-  page: { description: '页面导航、语义操作、读取与检查', actions: {
+  page: { description: 'Page navigation, semantic actions, reading and inspection', actions: {
     ...direct('open act back forward reload read snapshot screenshot pdf eval wait scroll get diff react vitals a11y pushstate batch'),
   } },
-  element: { description: '确定性元素操作', actions: {
+  element: { description: 'Deterministic element actions', actions: {
     ...direct('click dblclick fill type hover focus check uncheck select drag upload download scrollintoview get is find highlight'),
   } },
-  tab: { description: '标签页管理', actions: {
+  tab: { description: 'Tab management', actions: {
     list: ['tab', 'list'], ls: ['tab', 'list'], create: ['tab', 'new'],
     switch: ['tab'], close: ['tab', 'close'],
   } },
-  window: { description: '浏览器窗口', actions: { create: ['window', 'new'] } },
-  frame: { description: '页面框架', actions: { switch: ['frame'], main: ['frame', 'main'] } },
-  keyboard: { description: '键盘输入', actions: {
+  window: { description: 'Browser windows', actions: { create: ['window', 'new'] } },
+  frame: { description: 'Page frames', actions: { switch: ['frame'], main: ['frame', 'main'] } },
+  keyboard: { description: 'Keyboard input', actions: {
     press: ['press'], down: ['keydown'], up: ['keyup'], type: ['keyboard', 'type'], inserttext: ['keyboard', 'inserttext'],
   } },
-  touch: { description: '触摸操作', actions: direct('tap swipe') },
-  cookie: { description: 'Cookie 管理', actions: {
+  touch: { description: 'Touch actions', actions: direct('tap swipe') },
+  cookie: { description: 'Cookie management', actions: {
     list: ['cookies', 'get'], get: ['cookies', 'get'], set: ['cookies', 'set'], clear: ['cookies', 'clear'],
   } },
-  console: { description: '控制台日志与错误', actions: {
+  console: { description: 'Console logs and errors', actions: {
     list: ['console'], clear: ['console', '--clear'], errors: ['errors'],
   } },
-  script: { description: '初始化脚本', actions: { remove: ['removeinitscript'] } },
-  approval: { description: '执行器操作确认', actions: direct('confirm deny') },
-  skill: { description: '配套技能', actions: {
+  script: { description: 'Init scripts', actions: { remove: ['removeinitscript'] } },
+  approval: { description: 'Executor action approval', actions: direct('confirm deny') },
+  skill: { description: 'Bundled skills', actions: {
     list: ['skills', 'list'], ls: ['skills', 'list'], get: ['skills', 'get'], path: ['skills', 'path'],
   } },
-  profile: { description: '本机浏览器配置档案', actions: { list: ['profiles'] } },
-  server: { description: 'MCP 服务', actions: { start: ['mcp'] } },
+  profile: { description: 'Local browser profiles', actions: { list: ['profiles'] } },
+  server: { description: 'MCP server', actions: { start: ['mcp'] } },
 };
 
 export const existingGroups = {
-  auth: '模型及网站登录', network: '请求与网络控制', storage: '本地存储与会话存储',
-  mouse: '鼠标操作', dialog: '页面对话框', state: '登录状态文件', stream: '浏览器画面流',
-  trace: '浏览器追踪', profiler: '性能分析', record: '视频录制', clipboard: '剪贴板',
-  device: '设备', plugin: '执行器插件', webmcp: '页面提供的工具',
+  auth: 'Model and website login', network: 'Requests and network control', storage: 'Local and session storage',
+  mouse: 'Mouse actions', dialog: 'Page dialogs', state: 'Login state files', stream: 'Browser screen stream',
+  trace: 'Browser tracing', profiler: 'Profiling', record: 'Video recording', clipboard: 'Clipboard',
+  device: 'Devices', plugin: 'Executor plugins', webmcp: 'Page-provided tools',
 };
 
 // Session names belong to browser operations; account/package utilities stay global.
@@ -66,37 +66,37 @@ export function requiresSession(args: string[]): boolean {
 }
 
 const usages: Record<string, string> = {
-  'session clear': '[--json]（关闭全部会话并清除保存的标签页绑定，无需会话名）',
+  'session clear': '[--json] (close all sessions and clear saved tab bindings, no session name)',
   'session list': '[--json]', 'session ls': '[--json]', 'session current': '[--json]',
   'session inspect': '[--json]', 'session info': '[--json]',
-  'session id': '[--scope worktree|cwd|git-root] [--prefix <前缀>]',
-  'tab list': '[--json]', 'tab ls': '[--json]', 'tab create': '[URL] [--label <名称>]',
-  'tab switch': '<标签页ID或名称>', 'tab close': '[标签页ID或名称]',
-  'window create': '', 'frame switch': '<选择器>', 'frame main': '',
-  'keyboard type': '<文本>', 'keyboard inserttext': '<文本>',
+  'session id': '[--scope worktree|cwd|git-root] [--prefix <prefix>]',
+  'tab list': '[--json]', 'tab ls': '[--json]', 'tab create': '[URL] [--label <name>]',
+  'tab switch': '<tab ID or name>', 'tab close': '[tab ID or name]',
+  'window create': '', 'frame switch': '<selector>', 'frame main': '',
+  'keyboard type': '<text>', 'keyboard inserttext': '<text>',
   'cookie list': '[--json]', 'cookie get': '[--json]',
-  'cookie set': '<名称> <值> [--url <URL>] [--domain <域名>]', 'cookie clear': '',
+  'cookie set': '<name> <value> [--url <URL>] [--domain <domain>]', 'cookie clear': '',
   'console list': '[--json]', 'console clear': '', 'console errors': '[--clear] [--json]',
-  'skill list': '[--json]', 'skill ls': '[--json]', 'skill get': '<名称> [--full] [--json]',
-  'skill path': '<名称>', 'profile list': '[--json]', 'server start': '[--tools <profiles>]',
+  'skill list': '[--json]', 'skill ls': '[--json]', 'skill get': '<name> [--full] [--json]',
+  'skill path': '<name>', 'profile list': '[--json]', 'server start': '[--tools <profiles>]',
 };
 
-export const browserOptionsHelp = `浏览器连接参数：
-  --auto-connect       自动连接已开启远程调试的本机 Chrome，复用标签页和登录状态
-  --cdp <port|url>      连接指定调试端口或 CDP 地址；与 --auto-connect 二选一
-  --pin-tab            绑定当前标签页并跟随它打开的子标签页，避免其他页面抢走绑定
-  --no-pin-tab         取消固定标签页
-  --headed             启动本地浏览器时显示窗口；连接已有浏览器无需此参数
-  --json               以 JSON 输出操作结果，便于脚本读取
+export const browserOptionsHelp = `Browser connection options:
+  --auto-connect       Connect to local Chrome with remote debugging on, reusing tabs and logins
+  --cdp <port|url>     Connect to a debugging port or CDP URL; use instead of --auto-connect
+  --pin-tab            Bind the current tab and follow tabs it opens, so other pages cannot take the binding
+  --no-pin-tab         Unpin the tab
+  --headed             Show the window when launching a local browser; not needed when connecting
+  --json               Print results as JSON for scripts
 
-连接日常使用的 Chrome（144+）：
-  先在 chrome://inspect/#remote-debugging 启用远程调试，连接时在 Chrome 中允许授权。
+Connect your everyday Chrome (144+):
+  First enable remote debugging at chrome://inspect/#remote-debugging, then allow the connection in Chrome.
   jevb tab list mychrome --auto-connect
   jevb tab switch mychrome t2 --auto-connect
   jevb page snapshot mychrome --auto-connect --pin-tab
-  jevb page act mychrome "搜索 jev" --auto-connect --pin-tab
-  t2 替换为 tab list 返回的标签页 ID；后续使用同一会话名。
-  已有固定调试端口时：jevb browser connect mychrome 9222
+  jevb page act mychrome "search jev" --auto-connect --pin-tab
+  Replace t2 with a tab ID from tab list; keep using the same session name.
+  With a fixed debugging port: jevb browser connect mychrome 9222
 `;
 
 export function connectionHelp(resource: string): string {
@@ -105,9 +105,9 @@ export function connectionHelp(resource: string): string {
 
 export function groupHelp(name: string): string {
   const group = commandGroups[name];
-  return `用法：jev-browser ${name} <动作> [会话名] [对象] [选项]\n\n${group.description}\n\n动作：\n` +
+  return `Usage: jev-browser ${name} <action> [session name] [target] [options]\n\n${group.description}\n\nActions:\n` +
     Object.keys(group.actions).map(action => `  ${action}`).join('\n') +
-    `\n\n需要浏览器会话的动作使用：jev-browser ${name} <动作> <会话名> [对象] [选项]。\n使用 jev-browser ${name} <动作> --help 查看参数。\n` + connectionHelp(name);
+    `\n\nActions that need a browser session use: jev-browser ${name} <action> <session name> [target] [options].\nUse jev-browser ${name} <action> --help to see options.\n` + connectionHelp(name);
 }
 
 export function normalizeCommand(args: string[]): { args: string[]; path?: string; help?: string } {
@@ -132,7 +132,7 @@ export function normalizeCommand(args: string[]): { args: string[]; path?: strin
   }
   const path = `${resource} ${action}`;
   if (Object.hasOwn(usages, path) && rest.some(arg => ['--help', '-h'].includes(arg)))
-    return { args: ['help'], help: `用法：jev-browser ${path} ${requiresSession(args) ? '<会话名> ' : ''}${usages[path]}\n\n${group.description}。\n` + connectionHelp(resource) };
+    return { args: ['help'], help: `Usage: jev-browser ${path} ${requiresSession(args) ? '<session name> ' : ''}${usages[path]}\n\n${group.description}.\n` + connectionHelp(resource) };
   if (((resource === 'tab' || resource === 'frame') && action === 'switch') &&
     (!rest.length || rest[0].startsWith('-')) && !rest.some(arg => ['--help', '-h'].includes(arg)))
     throw new JevError('NEEDS_INPUT', `Missing target. Usage: jevb ${resource} switch <session> <target>.`);

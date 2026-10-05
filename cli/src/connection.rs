@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use std::env;
 use std::fs;
 use std::hash::{Hash, Hasher};
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -1121,7 +1121,8 @@ fn read_timeout_for(cmd: &Value) -> Option<Duration> {
 fn send_command_once(cmd: &Value, session: &str) -> Result<Response, String> {
     let mut stream = connect(session)?;
 
-    stream.set_read_timeout(read_timeout_for(cmd)).ok();
+    let read_timeout = read_timeout_for(cmd);
+    stream.set_read_timeout(read_timeout).ok();
     stream.set_write_timeout(Some(Duration::from_secs(5))).ok();
 
     let mut json_str = serde_json::to_string(cmd).map_err(|e| e.to_string())?;
@@ -1133,9 +1134,18 @@ fn send_command_once(cmd: &Value, session: &str) -> Result<Response, String> {
 
     let mut reader = BufReader::new(stream);
     let mut response_line = String::new();
-    reader
-        .read_line(&mut response_line)
-        .map_err(|e| dispatch_error(format!("Failed to read: {}", e)))?;
+    reader.read_line(&mut response_line).map_err(|e| {
+        // An expired read timeout surfaces as EAGAIN, which reads like a socket fault.
+        if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) {
+            let secs = read_timeout.map(|d| d.as_secs()).unwrap_or(0);
+            dispatch_error(format!(
+                "The browser did not respond within {}s. It may be hung: restart it and try again.",
+                secs
+            ))
+        } else {
+            dispatch_error(format!("Failed to read: {}", e))
+        }
+    })?;
 
     serde_json::from_str(&response_line)
         .map_err(|e| dispatch_error(format!("Invalid response: {}", e)))

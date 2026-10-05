@@ -8,7 +8,7 @@ export function publish(options = {}, run = spawnSync) {
   const env = options.env ?? process.env;
   // npm also runs scripts.publish as a post-publication lifecycle hook.
   if (env.npm_command === 'publish') return 0;
-  if (!env.npm_execpath) throw new Error('请通过 npm run publish 执行发布。');
+  if (!env.npm_execpath) throw new Error('Publish with npm run publish.');
   const args = options.args ?? process.argv.slice(2);
   const steps = [
     [env.npm_execpath, 'run', 'build:core'],

@@ -14,7 +14,7 @@ if (result.error || result.status !== 0) process.exit(result.status || 1);
 mkdirSync(join(root, 'libexec'), { recursive: true });
 const suffix = process.platform === 'win32' ? '.exe' : '';
 const destination = join(root, `libexec/jev-browser-core-${process.platform}-${process.arch}${suffix}`);
-// macOS 会按 inode 缓存代码签名；原地覆盖旧二进制会触发 SIGKILL (Code Signature Invalid)，必须先删除再复制。
+// macOS caches code signatures by inode, so overwriting the binary in place triggers SIGKILL (Code Signature Invalid). Delete it before copying.
 rmSync(destination, { force: true });
 copyFileSync(join(root, `cli/target/ci/jev-browser-core${suffix}`), destination);
 chmodSync(destination, 0o755);

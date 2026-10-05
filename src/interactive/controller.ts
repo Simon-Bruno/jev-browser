@@ -124,15 +124,15 @@ export class Controller extends EventEmitter {
   async submit(raw: string) {
     const text = raw.trim(); if (!text || this.stopping) return;
     if (this.state.busy || this.refreshing) { this.log('An action is running. Wait for it to finish before sending.'); return; }
-    const input = aliases[text] ?? text;
+    const input = (Object.hasOwn(aliases, text) ? aliases[text] : text);
     if (/^\/(exit|quit)( --close)?$/.test(input)) { await this.shutdown(input.endsWith('--close')); return; }
     this.log(text, 'user');
     await this.perform(async (browser, signal) => {
       if (input.startsWith('/')) { await this.slash(input, browser); return; }
       if (this.state.pending && await this.answer(input, browser)) { await this.refresh(browser); return; }
       this.state.pending = undefined;
-      const newAction = /^(?:请)?(?:点击|打开|填写|输入|搜索|勾选|取消勾选|读取|返回|刷新|滚动|click\b|open\b|fill\b|type\b|search\b|read\b)/i.test(input);
-      const instruction = this.clarification && !newAction ? `${this.clarification}\n补充说明：${input}` : input;
+      const newAction = /^(?:please\s+)?(?:click\b|open\b|fill\b|type\b|search\b|read\b|check\b|uncheck\b|go\s+back\b|reload\b|refresh\b|scroll\b)/i.test(input);
+      const instruction = this.clarification && !newAction ? `${this.clarification}\nClarification: ${input}` : input;
       this.clarification = undefined;
       this.phase('Reading the page and identifying the target…');
       const document = await this.document(browser);
@@ -169,9 +169,9 @@ export class Controller extends EventEmitter {
   private async answer(input: string, browser: Browser): Promise<boolean> {
     const pending = this.state.pending!;
     if (Date.now() > pending.expires) { this.reset(); throw new JevError('EXPIRED', 'Confirmation expired. Enter the action again.'); }
-    const match = /^(?:第)?([1-9]|一|二|三)(?:个)?$/.exec(input);
+    const match = /^(?:#)?([1-9]|first|second|third)$/i.exec(input);
     if (pending.choices.length > 1 && match) {
-      const index = /^[1-9]$/.test(match[1]) ? +match[1] - 1 : ['一', '二', '三'].indexOf(match[1]);
+      const index = /^[1-9]$/.test(match[1]) ? +match[1] - 1 : ['first', 'second', 'third'].indexOf(match[1].toLowerCase());
       const choice = pending.choices[index];
       if (!choice) { this.log('Select a target from the list.'); return true; }
       await this.guardDocument(browser, pending.document);
@@ -181,12 +181,12 @@ export class Controller extends EventEmitter {
       pending.choices = [];
       this.log(`${planMessage(pending.plan)}\nUse ↑↓ to choose execute or cancel, then Enter to confirm.`); return true;
     }
-    if (/^(确认|是|y|yes)$/i.test(input)) {
+    if (/^(y|yes|confirm)$/i.test(input)) {
       if (pending.choices.length > 1) { this.log('Select a target first.'); return true; }
       await this.guardDocument(browser, pending.document);
       this.state.pending = undefined; await this.execute(pending.plan, browser); return true;
     }
-    if (/^(取消|否|n|no)$/i.test(input)) { this.state.pending = undefined; this.log('Cancelled.'); return true; }
+    if (/^(n|no|cancel)$/i.test(input)) { this.state.pending = undefined; this.log('Cancelled.'); return true; }
     return false;
   }
   private async document(browser: Browser): Promise<number | undefined> {

@@ -1,11 +1,11 @@
 import { JevError } from './errors.js';
 
 export const operations = {
-  click: '单击目标', dblclick: '双击目标', fill: '清空并填写输入框', type: '向输入框追加内容',
-  check: '设置复选框为选中', uncheck: '取消勾选复选框', hover: '悬停目标', focus: '聚焦目标',
-  select: '选择原生下拉框的明确值或标签', scrollintoview: '将目标滚入视口', get_text: '读取目标原文',
-  open: '打开网站或网址', back: '后退一页', forward: '前进一页', reload: '刷新当前页面',
-  scroll: '按指定方向滚动页面', press: '按一个明确按键或组合键',
+  click: 'Click the target', dblclick: 'Double-click the target', fill: 'Clear and fill the input', type: 'Append text to the input',
+  check: 'Set the checkbox to checked', uncheck: 'Uncheck the checkbox', hover: 'Hover over the target', focus: 'Focus the target',
+  select: 'Select an explicit value or label in a native dropdown', scrollintoview: 'Scroll the target into view', get_text: 'Read the target text verbatim',
+  open: 'Open a website or URL', back: 'Go back one page', forward: 'Go forward one page', reload: 'Reload the current page',
+  scroll: 'Scroll the page in the given direction', press: 'Press one explicit key or key combination',
 } as const;
 export type Operation = keyof typeof operations;
 export type ActOptions = {
@@ -16,7 +16,7 @@ export type ActOptions = {
 };
 export const targetless = new Set<Operation>(['open', 'back', 'forward', 'reload', 'scroll', 'press']);
 export const needsValue = new Set<Operation>(['fill', 'type', 'select', 'open', 'press', 'scroll']);
-export const directions = { up: '向上', down: '向下', left: '向左', right: '向右' };
+export const directions = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
 export const keys = Object.fromEntries(['Enter', 'Tab', 'Escape', 'Backspace', 'Delete', 'ArrowUp', 'ArrowDown',
   'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Space', 'Control+a', 'Meta+a', 'Shift+Tab'].map(k => [k, k]));
 

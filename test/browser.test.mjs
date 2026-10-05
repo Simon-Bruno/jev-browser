@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Browser, publicBrowserError } from '../dist/browser.js';
 import { parseArgs } from '../dist/arguments.js';
 
-test('仅首次打开且明确缺少 Chrome 时初始化，安装后打开一次', async () => {
+test('sets up only on first open when Chrome is clearly missing, then opens once', async () => {
   const b = new Browser([]); const calls = [];
   b.run = async args => {
     calls.push(args);
@@ -13,14 +13,14 @@ test('仅首次打开且明确缺少 Chrome 时初始化，安装后打开一次
   assert.deepEqual(calls, [['open', 'https://example.com'], ['install'], ['open', 'https://example.com']]);
 });
 
-test('导航超时不安装、不重放', async () => {
+test('navigation timeout neither installs nor replays', async () => {
   const b = new Browser([]); let calls = 0;
   b.run = async () => { calls++; return { code: 1, stdout: '', stderr: '' }; };
   assert.equal(await b.passthrough(['open', 'https://example.com']), 1);
   assert.equal(calls, 1);
 });
 
-test('状态检查通过一次 stdin batch 顺序返回结果，false 状态保留', async () => {
+test('state checks return results in order through one stdin batch and keep false states', async () => {
   const b = new Browser([]); const calls = [];
   const commands = [['is', 'visible', '@e1'], ['is', 'enabled', '@e1']];
   b.run = async (args, options) => {
@@ -33,7 +33,7 @@ test('状态检查通过一次 stdin batch 顺序返回结果，false 状态保�
   assert.deepEqual(calls, [{ args: ['--json', 'batch', '--bail'], options: { input: JSON.stringify(commands) } }]);
 });
 
-test('批次错误、中途停止、缺项、损坏响应和异常退出均拒绝且不重放', async () => {
+test('batch errors, early stops, missing items, corrupt responses and crashes are rejected without replay', async () => {
   const good = { success: true, result: { visible: true } };
   const bad = { success: false, error: 'Element detached' };
   for (const [raw, exitCode, code] of [
@@ -51,7 +51,7 @@ test('批次错误、中途停止、缺项、损坏响应和异常退出均拒�
   }
 });
 
-test('敏感值只通过 stdin 单条 batch 传递，输出丢弃 echo', async () => {
+test('sensitive values go only through a single stdin batch and echoed output is dropped', async () => {
   const b = new Browser([]); const secret = ' a\n`secret`'; let invocation;
   b.run = async (args, options) => {
     invocation = { args, options };
@@ -63,7 +63,7 @@ test('敏感值只通过 stdin 单条 batch 传递，输出丢弃 echo', async (
   assert.deepEqual(result, { filled: true });
 });
 
-test('IPC 或浏览器动作超时返回结果未知且仅发送一次', async () => {
+test('IPC or browser action timeouts return an unknown result and send only once', async () => {
   for (const message of ['EXECUTION_UNKNOWN: Failed to read', 'Timeout waiting for navigation']) {
     const b = new Browser([]); let count = 0;
     b.run = async () => { count++; return { code: 1, stdout: JSON.stringify([{ success: false, error: message }]), stderr: '' }; };
@@ -72,7 +72,7 @@ test('IPC 或浏览器动作超时返回结果未知且仅发送一次', async (
   }
 });
 
-test('写入失败不泄露原文或 JSON 转义后的敏感值', async () => {
+test('write failures do not leak raw or JSON-escaped sensitive values', async () => {
   const b = new Browser([]); const secret = 'password\n"quoted"';
   b.run = async () => ({ code: 1, stdout: JSON.stringify([{ success: false, error: `Invalid value ${JSON.stringify(secret)}` }]), stderr: '' });
   await assert.rejects(b.request(['fill', '@e1', secret], { dispatch: true, privateValue: secret }), error => {

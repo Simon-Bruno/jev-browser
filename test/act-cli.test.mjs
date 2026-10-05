@@ -38,7 +38,7 @@ function fixture(t) {
       if (options?.dispatch && args[0] === process.env.FAIL_ON)
         throw new JevError(process.env.ERROR_CODE || 'EXECUTION_UNKNOWN', 'Fixture execution failure', true);
       if (args[0] === 'snapshot') return { origin: 'https://example.com', pageId: process.env.PAGE_ID || 'p1', frameId: null,
-        snapshot: '- textbox "搜索框" [ref=e1]', refs: { e1: { role: 'textbox', name: '搜索框', backendNodeId: 1 } } };
+        snapshot: '- textbox "Search box" [ref=e1]', refs: { e1: { role: 'textbox', name: 'Search box', backendNodeId: 1 } } };
       if (args[0] === 'is') return { visible: true, enabled: true };
       return {};
     };
@@ -64,7 +64,7 @@ function fixture(t) {
 
 test('JSON CLI exposes a concrete plan, confirms once without a model call, and supports cancellation', t => {
   const f = fixture(t);
-  const pending = f.run(['搜索 jev']);
+  const pending = f.run(['search jev']);
   assert.equal(pending.status, 2, pending.stdout + pending.stderr);
   assert.equal(pending.result.data.status, 'needs_confirmation');
   assert.equal(pending.result.meta.decisions[0].answers.input_target.probabilities.e1, .799);
@@ -81,18 +81,18 @@ test('JSON CLI exposes a concrete plan, confirms once without a model call, and 
   assert.deepEqual(f.actions(), [['fill', '@e1', 'jev'], ['focus', '@e1'], ['press', 'Enter']]);
   assert.equal(f.models().length, 1);
   assert.equal(f.run(['--confirm', pending.result.confirmation.id]).result.error.code, 'CONFIRMATION_NOT_FOUND');
-  const cancel = f.run(['搜索 jev']);
+  const cancel = f.run(['search jev']);
   assert.equal(f.run(['--cancel', cancel.result.confirmation.id], { NO_MODEL: '1' }).result.data.status, 'cancelled');
   assert.equal(f.actions().length, 3);
 });
 
 test('CLI confirmation revalidates page identity and dry-run never issues executable tokens', t => {
   const f = fixture(t);
-  const preview = f.run(['搜索 jev', '--dry-run']);
+  const preview = f.run(['search jev', '--dry-run']);
   assert.equal(preview.status, 2, preview.stderr);
   assert.equal(preview.result.data.status, 'needs_confirmation');
   assert.equal(preview.result.confirmation, undefined);
-  const pending = f.run(['搜索 jev']);
+  const pending = f.run(['search jev']);
   const stale = f.run(['--confirm', pending.result.confirmation.id], { PAGE_ID: 'other', NO_MODEL: '1' });
   assert.equal(stale.result.error.code, 'STALE_TARGET');
   assert.equal(stale.result.error.dispatched, false);
@@ -105,7 +105,7 @@ test('CLI confirmation revalidates page identity and dry-run never issues execut
 test('stdin stays private in pending output and model questions, then executes the exact saved value', t => {
   const f = fixture(t);
   const secret = ' secret-123\n';
-  const pending = f.run(['--op', 'fill', '搜索框', '--value-stdin'], { INPUT: secret });
+  const pending = f.run(['--op', 'fill', 'Search box', '--value-stdin'], { INPUT: secret });
   assert.equal(pending.status, 2, pending.stderr);
   assert.equal(pending.stdout.includes('secret-123'), false);
   assert.equal(JSON.stringify(f.models()).includes('secret-123'), false);
@@ -117,35 +117,35 @@ test('stdin stays private in pending output and model questions, then executes t
 test('interactive confirmation accepts y; Enter, no and Ctrl-C cancel without dispatch', t => {
   const f = fixture(t);
   for (const INPUT of ['\n', 'n\n', '\u0003']) {
-    const result = f.run(['搜索 jev'], { FAKE_TTY: '1', INPUT });
+    const result = f.run(['search jev'], { FAKE_TTY: '1', INPUT });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.match(result.stdout, /是否执行/);
-    assert.match(result.stdout, /已取消，尚未执行/);
+    assert.match(result.stdout, /Execute\?/);
+    assert.match(result.stdout, /Cancelled, not run/);
     assert.deepEqual(f.actions(), []);
   }
-  const yes = f.run(['搜索 jev'], { FAKE_TTY: '1', INPUT: 'y\n' });
+  const yes = f.run(['search jev'], { FAKE_TTY: '1', INPUT: 'y\n' });
   assert.equal(yes.status, 0, yes.stdout + yes.stderr);
-  assert.match(yes.stdout, /操作已执行/);
+  assert.match(yes.stdout, /Action done/);
   assert.deepEqual(f.actions(), [['fill', '@e1', 'jev'], ['focus', '@e1'], ['press', 'Enter']]);
 });
 
 test('unknown sites return an actionable JSON error and never dispatch', t => {
   const f = fixture(t);
-  const result = f.run(['打开某个未知网站'], { OPEN_SITE: 'none' });
+  const result = f.run(['open some unknown website'], { OPEN_SITE: 'none' });
   assert.equal(result.result.error.code, 'NEEDS_URL');
   assert.match(result.result.error.message, /full URL/);
   assert.match(result.result.error.message, /jevb page act demo "Open https:\/\/example.com"/);
   assert.equal(result.result.error.dispatched, false);
   assert.equal(result.result.meta.decisions[0].answers.url.choice, 'none');
   assert.deepEqual(f.actions(), []);
-  const preview = f.run(['打开某个未知网站', '--dry-run'], { OPEN_SITE: 'none' });
+  const preview = f.run(['open some unknown website', '--dry-run'], { OPEN_SITE: 'none' });
   assert.match(preview.result.error.message, /--dry-run --json/);
 });
 
 test('non-interactive never prompts or saves pending; non-TTY agents retain confirmation tokens', t => {
   for (const extra of [{}, { FAKE_TTY: '1', INPUT: 'y\n' }]) {
     const f = fixture(t);
-    const result = f.run(['搜索 jev', '--non-interactive'], extra);
+    const result = f.run(['search jev', '--non-interactive'], extra);
     assert.equal(result.status, 2, result.stderr);
     assert.deepEqual(f.pending(), []);
     assert.deepEqual(f.actions(), []);
@@ -153,10 +153,10 @@ test('non-interactive never prompts or saves pending; non-TTY agents retain conf
       assert.equal(result.result.data.status, 'needs_confirmation');
       assert.equal(result.result.confirmation, undefined);
       assert.equal(result.result.meta.modelRequests, 1);
-    } else assert.doesNotMatch(result.stdout, /是否执行|--confirm/);
+    } else assert.doesNotMatch(result.stdout, /Execute\?|--confirm/);
   }
   const f = fixture(t);
-  const plain = f.run(['搜索 jev'], { PLAIN: '1' });
+  const plain = f.run(['search jev'], { PLAIN: '1' });
   assert.equal(plain.status, 2, plain.stderr);
   assert.equal(f.pending().length, 1);
   assert.match(plain.stdout, /--confirm/);
@@ -165,11 +165,11 @@ test('non-interactive never prompts or saves pending; non-TTY agents retain conf
 
 test('non-interactive executes confident plans and returns zero for resolved previews', t => {
   const f = fixture(t);
-  const preview = f.run(['搜索 jev', '--dry-run', '--non-interactive'], { TARGET_PROBABILITY: '.8' });
+  const preview = f.run(['search jev', '--dry-run', '--non-interactive'], { TARGET_PROBABILITY: '.8' });
   assert.equal(preview.status, 0, preview.stderr);
   assert.equal(preview.result.data.status, 'resolved');
   assert.deepEqual(f.actions(), []);
-  const result = f.run(['搜索 jev', '--non-interactive'], { TARGET_PROBABILITY: '.8' });
+  const result = f.run(['search jev', '--non-interactive'], { TARGET_PROBABILITY: '.8' });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.result.data.status, 'executed');
   assert.equal(f.actions().length, 3);
@@ -179,7 +179,7 @@ test('non-interactive executes confident plans and returns zero for resolved pre
 test('NO_MATCH and AMBIGUOUS expose the model distribution without dispatch', t => {
   for (const [choice, code] of [['none', 'NO_MATCH'], ['ambiguous', 'AMBIGUOUS']]) {
     const f = fixture(t);
-    const result = f.run(['--op', 'click', '搜索框'], { TARGET_CHOICE: choice, TARGET_PROBABILITY: '.89' });
+    const result = f.run(['--op', 'click', 'Search box'], { TARGET_CHOICE: choice, TARGET_PROBABILITY: '.89' });
     assert.equal(result.status, 1, result.stderr);
     assert.equal(result.result.error.code, code);
     assert.equal(result.result.error.dispatched, false);
@@ -196,8 +196,8 @@ test('execution failures return 3 and retain decisions for immediate and confirm
   for (const confirm of [false, true]) {
     for (const [FAIL_ON, ERROR_CODE] of [['fill', 'EXECUTION_UNKNOWN'], ['press', 'STALE_TARGET']]) {
       const f = fixture(t);
-      const pending = confirm ? f.run(['搜索 jev']) : undefined;
-      const result = f.run(confirm ? ['--confirm', pending.result.confirmation.id] : ['搜索 jev', '--non-interactive'],
+      const pending = confirm ? f.run(['search jev']) : undefined;
+      const result = f.run(confirm ? ['--confirm', pending.result.confirmation.id] : ['search jev', '--non-interactive'],
         { TARGET_PROBABILITY: '1', FAIL_ON, ERROR_CODE, ...(confirm ? { NO_MODEL: '1' } : {}) });
       assert.equal(result.status, 3, result.stderr);
       assert.equal(result.result.error.code, ERROR_CODE);
@@ -211,14 +211,14 @@ test('execution failures return 3 and retain decisions for immediate and confirm
 
 test('non-interactive URL and login failures never prompt, even on a TTY', t => {
   const f = fixture(t);
-  const url = f.run(['打开某个未知网站', '--non-interactive'], { OPEN_SITE: 'none', FAKE_TTY: '1', INPUT: 'https://example.com\n' });
+  const url = f.run(['open some unknown website', '--non-interactive'], { OPEN_SITE: 'none', FAKE_TTY: '1', INPUT: 'https://example.com\n' });
   assert.equal(url.status, 1, url.stderr);
   assert.match(url.stderr, /NEEDS_URL/);
-  assert.doesNotMatch(url.stdout, /请输入完整网址/);
-  const login = f.run(['搜索 jev', '--non-interactive'], { TYPESAFE_API_KEY: '', FAKE_TTY: '1', INPUT: 'fixture\n' });
+  assert.doesNotMatch(url.stdout, /Enter a full URL/);
+  const login = f.run(['search jev', '--non-interactive'], { TYPESAFE_API_KEY: '', FAKE_TTY: '1', INPUT: 'fixture\n' });
   assert.equal(login.status, 1, login.stderr);
   assert.match(login.stderr, /MISSING_API_KEY/);
-  assert.doesNotMatch(login.stderr, /请先登录/);
+  assert.doesNotMatch(login.stderr, /Please log in first/);
   assert.deepEqual(f.actions(), []);
   assert.deepEqual(f.pending(), []);
 });
@@ -226,7 +226,7 @@ test('non-interactive URL and login failures never prompt, even on a TTY', t => 
 test('failure evidence does not reveal explicit stdin values', t => {
   const f = fixture(t);
   const secret = 'private-failure-value';
-  const result = f.run(['--op', 'fill', '搜索框', '--value-stdin', '--non-interactive'],
+  const result = f.run(['--op', 'fill', 'Search box', '--value-stdin', '--non-interactive'],
     { INPUT: secret, TARGET_PROBABILITY: '1', FAIL_ON: 'fill' });
   assert.equal(result.status, 3, result.stderr);
   assert.equal(result.result.meta.decisions.length, 1);
@@ -237,19 +237,19 @@ test('failure evidence does not reveal explicit stdin values', t => {
 test('interactive unknown site accepts a URL, cancels, rejects invalid URLs, and respects dry-run', t => {
   for (const INPUT of ['\n', '\u0003', 'javascript:alert(1)\n', 'example.com\n', 'https://example.com/path\n']) {
     const f = fixture(t);
-    const result = f.run(['打开某个未知网站'], { OPEN_SITE: 'none', FAKE_TTY: '1', INPUT });
-    assert.match(result.stdout, /请输入完整网址/);
+    const result = f.run(['open some unknown website'], { OPEN_SITE: 'none', FAKE_TTY: '1', INPUT });
+    assert.match(result.stdout, /Enter a full URL/);
     if (INPUT.startsWith('https:')) {
       assert.equal(result.status, 0, result.stderr);
       assert.deepEqual(f.actions(), [['open', 'https://example.com/path']]);
       assert.equal(f.models().length, 1);
     } else {
       assert.deepEqual(f.actions(), []);
-      assert.match(result.stdout + result.stderr, INPUT === '\n' || INPUT === '\u0003' ? /已取消/ : /INVALID_VALUE/);
+      assert.match(result.stdout + result.stderr, INPUT === '\n' || INPUT === '\u0003' ? /Cancelled/ : /INVALID_VALUE/);
     }
   }
   const f = fixture(t);
-  const result = f.run(['打开某个未知网站', '--dry-run'], { OPEN_SITE: 'none', FAKE_TTY: '1', INPUT: 'https://example.com\n' });
-  assert.match(result.stdout, /操作预览/);
+  const result = f.run(['open some unknown website', '--dry-run'], { OPEN_SITE: 'none', FAKE_TTY: '1', INPUT: 'https://example.com\n' });
+  assert.match(result.stdout, /Action preview/);
   assert.deepEqual(f.actions(), []);
 });

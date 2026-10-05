@@ -36,8 +36,8 @@ function fixture(settings = {}) {
         if (args[0] === 'session') return { active: true, runtime: { browserLaunched: true, connection: { kind: 'managed', headless: true } } };
         if (args[0] === 'tab' && args[1] === 'list') return { tabs: state.active ? [{ tabId: 't1', targetId: state.pageId, title: 'Fixture', url: state.url, active: true }] : [] };
         if (args[0] === 'snapshot') return { origin: state.url, pageId: state.pageId, frameId: null,
-          snapshot: '- document\n  - button "提交" [ref=e1]\n  - button "提交另一项" [ref=e2]',
-          refs: { e1: { name: '提交', role: 'button', backendNodeId: 1 }, e2: { name: '提交另一项', role: 'button', backendNodeId: 2 } } };
+          snapshot: '- document\n  - button "Submit" [ref=e1]\n  - button "Submit another" [ref=e2]',
+          refs: { e1: { name: 'Submit', role: 'button', backendNodeId: 1 }, e2: { name: 'Submit another', role: 'button', backendNodeId: 2 } } };
         if (args[0] === 'eval' && args[1] === 'performance.timeOrigin') return { result: state.document };
         if (args[0] === 'is') return { visible: true, enabled: true };
         if (settings.dispatch && options?.dispatch) await settings.dispatch(args, lifecycle);
@@ -65,9 +65,9 @@ test('interactive routing leaves pipes, help, version and CLI arguments noninter
 
 test('shortcuts use the browser directly, unknown commands never reach the model', async () => {
   const s = fixture(); await s.controller.start();
-  for (const input of ['/back', '/forward', '/reload', '/up', '/down 200', '后退', '/bak', '/up -1']) await s.controller.submit(input);
+  for (const input of ['/back', '/forward', '/reload', '/up', '/down 200', '/bak', '/up -1']) await s.controller.submit(input);
   assert.equal(s.requests.length, 0);
-  assert.equal(s.calls.filter(args => args[0] === 'back').length, 2);
+  assert.equal(s.calls.filter(args => args[0] === 'back').length, 1);
   assert.ok(s.calls.some(args => args.join(' ') === 'scroll down 200'));
   assert.match(s.controller.state.transcript.map(x => x.text).join('\n'), /Did you mean \/back/);
   assert.throws(() => navigationCommand('open', 'javascript:alert(1)'), { code: 'INVALID_ARGUMENT' });
@@ -75,35 +75,35 @@ test('shortcuts use the browser directly, unknown commands never reach the model
 });
 
 test('confirmation is explicit, one-use, and invalidated by navigation', async () => {
-  const s = fixture(); await s.controller.start(); await s.controller.submit('点击提交');
+  const s = fixture(); await s.controller.start(); await s.controller.submit('click submit');
   assert.ok(s.controller.state.pending); assert.equal(s.calls.filter(c => c[0] === 'click').length, 0);
-  await s.controller.submit('确认'); assert.equal(s.calls.filter(c => c[0] === 'click').length, 1);
+  await s.controller.submit('confirm'); assert.equal(s.calls.filter(c => c[0] === 'click').length, 1);
   assert.equal(s.requests.length, 1); assert.equal(s.controller.state.pending, undefined);
-  await s.controller.submit('点击提交'); s.state.url += 'other'; await s.controller.poll();
+  await s.controller.submit('click submit'); s.state.url += 'other'; await s.controller.poll();
   assert.equal(s.controller.state.pending, undefined); assert.equal(s.calls.filter(c => c[0] === 'click').length, 1);
   await s.controller.shutdown();
 });
 
 test('ambiguous targets bind numbered choices to the observed candidates without a second model call', async () => {
-  const s = fixture({ target: 'ambiguous' }); await s.controller.start(); await s.controller.submit('点击提交');
+  const s = fixture({ target: 'ambiguous' }); await s.controller.start(); await s.controller.submit('click submit');
   assert.equal(s.controller.state.pending.choices.length, 2);
-  await s.controller.submit('第二个'); await s.controller.submit('确认');
+  await s.controller.submit('second'); await s.controller.submit('confirm');
   assert.deepEqual(s.calls.filter(c => c[0] === 'click'), [['click', '@e2']]);
   assert.equal(s.requests.length, 1); await s.controller.shutdown();
 });
 
 test('confirmation refuses stale target even without a status poll', async () => {
-  const s = fixture(); await s.controller.start(); await s.controller.submit('点击提交'); s.state.pageId = 'p2';
-  await s.controller.submit('确认'); assert.equal(s.calls.filter(c => c[0] === 'click').length, 0);
+  const s = fixture(); await s.controller.start(); await s.controller.submit('click submit'); s.state.pageId = 'p2';
+  await s.controller.submit('confirm'); assert.equal(s.calls.filter(c => c[0] === 'click').length, 0);
   assert.match(s.controller.state.transcript.at(-1).text, /changed/); await s.controller.shutdown();
 });
 
 test('cancel drops a late model response and does not queue the next input', async () => {
   let release; const gate = new Promise(resolve => { release = resolve; });
   const s = fixture({ delay: () => gate }); await s.controller.start();
-  const first = s.controller.submit('点击提交');
+  const first = s.controller.submit('click submit');
   while (!s.requests.length) await new Promise(resolve => setTimeout(resolve, 1));
-  await s.controller.submit('点击另一项'); s.controller.cancel(); release(); await first;
+  await s.controller.submit('click submit another'); s.controller.cancel(); release(); await first;
   assert.equal(s.requests.length, 1); assert.equal(s.calls.filter(c => c[0] === 'click').length, 0);
   assert.equal(s.controller.state.pending, undefined);
   await s.controller.submit('/back'); assert.equal(s.calls.filter(c => c[0] === 'back').length, 1);
@@ -132,16 +132,16 @@ test('provider round-trip reuses clients; credentials refresh replaces only that
 test('missing credentials allow navigation and terminal text cannot inject escape sequences', async () => {
   const models = new Models({}, () => ({})); assert.throws(() => models.config('auto'), { code: 'MISSING_API_KEY' }); await models.close();
   assert.equal(clean('ok\x1b[2J\x1b]0;bad\x07\u202Ehello'), 'okhello');
-  const editor = { value: '中👨‍👩‍👧‍👦e\u0301文', cursor: 3 };
+  const editor = { value: 'カ👨‍👩‍👧‍👦e\u0301ナ', cursor: 3 };
   assert.equal(graphemes(editor.value).length, 4);
-  assert.deepEqual(edit(editor, { remove: 'before' }), { value: '中👨‍👩‍👧‍👦文', cursor: 2 });
-  assert.equal(edit({ value: '', cursor: 0 }, { insert: '一\r\n二\n三' }).value, '一\n二\n三');
+  assert.deepEqual(edit(editor, { remove: 'before' }), { value: 'カ👨‍👩‍👧‍👦ナ', cursor: 2 });
+  assert.equal(edit({ value: '', cursor: 0 }, { insert: 'ア\r\nイ\nウ' }).value, 'ア\nイ\nウ');
 });
 
 test('same-URL reload invalidates confirmation before a poll', async () => {
-  const s = fixture(); await s.controller.start(); await s.controller.submit('点击提交');
+  const s = fixture(); await s.controller.start(); await s.controller.submit('click submit');
   assert.ok(s.controller.state.pending); s.state.document++;
-  await s.controller.submit('确认');
+  await s.controller.submit('confirm');
   assert.equal(s.calls.filter(args => args[0] === 'click').length, 0);
   assert.equal(s.controller.state.pending, undefined);
   assert.match(s.controller.state.transcript.at(-1).text, /reloaded/);

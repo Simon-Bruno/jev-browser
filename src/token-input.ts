@@ -2,7 +2,7 @@ import { emitKeypressEvents, type Key } from 'node:readline';
 import { JevError } from './errors.js';
 import { validKey } from './credentials.js';
 
-export async function readToken(fromStdin: boolean, prompt = 'API Key（输入隐藏）：'): Promise<string> {
+export async function readToken(fromStdin: boolean, prompt = 'API key (input hidden): '): Promise<string> {
   let value = '';
   if (fromStdin) {
     if (process.stdin.isTTY) throw new JevError('NEEDS_INPUT', '--with-token requires an API key on stdin.');

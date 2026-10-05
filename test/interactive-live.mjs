@@ -22,19 +22,19 @@ try {
   check(controller.state.connection.includes('CDP'), 'real CDP connection');
   check(controller.state.mode === 'Unknown', 'attached display mode is not guessed');
   await controller.submit(`/open http://127.0.0.1:${server.address().port}`);
-  for (let i = 0; i < 20 && !controller.state.tabs.some(t => t.active && t.title === 'Jev 浏览器测试页面'); i++) {
+  for (let i = 0; i < 20 && !controller.state.tabs.some(t => t.active && t.title === 'Jev browser test page'); i++) {
     await new Promise(resolve => setTimeout(resolve, 100)); await controller.poll();
   }
-  check(controller.state.tabs.some(t => t.active && t.title === 'Jev 浏览器测试页面'), 'tab metadata');
-  await controller.submit('在姓名输入框填写“交互测试”');
-  if (controller.state.pending) await controller.submit('确认');
-  check((await browser.request(['get', 'value', '#name'])).value === '交互测试', 'natural language fill');
-  await controller.submit('点击入住信息区域的确认按钮');
+  check(controller.state.tabs.some(t => t.active && t.title === 'Jev browser test page'), 'tab metadata');
+  await controller.submit('fill “Interactive test” in the Name input');
+  if (controller.state.pending) await controller.submit('confirm');
+  check((await browser.request(['get', 'value', '#name'])).value === 'Interactive test', 'natural language fill');
+  await controller.submit('click the confirm button in the check-in details region');
   check(!!controller.state.pending, 'confirmation before submit button');
-  check((await browser.request(['get', 'text', '#result'])).text === '等待操作', 'no dispatch before confirmation');
+  check((await browser.request(['get', 'text', '#result'])).text === 'Waiting for action', 'no dispatch before confirmation');
   const before = models.status()[0].requests;
-  await controller.submit('确认');
-  check((await browser.request(['get', 'text', '#result'])).text === '入住已确认', 'confirmed action');
+  await controller.submit('confirm');
+  check((await browser.request(['get', 'text', '#result'])).text === 'Check-in confirmed', 'confirmed action');
   check(models.status()[0].requests === before, 'confirmation needs zero extra model calls');
   for (const command of ['/down', '/up', '/reload', '/new', '/tabs', '/tab t1', '/back', '/forward']) await controller.submit(command);
   check(models.status()[0].requests === before, 'all shortcuts need zero model calls');

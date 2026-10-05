@@ -11,7 +11,7 @@ import { withSession } from '../dist/session.js';
 
 const config = modelConfig(process.env, readCredentials());
 const cdp = process.env.JEV_TEST_CDP;
-if (!cdp) throw Error('JEV_TEST_CDP 需要指向独立测试浏览器。');
+if (!cdp) throw Error('JEV_TEST_CDP must point at a separate test browser.');
 const html = await readFile(new URL('./fixtures/page.html', import.meta.url));
 const linkHtml = await readFile(new URL('./fixtures/link.html', import.meta.url));
 const server = createServer((req, res) => {
@@ -23,33 +23,33 @@ const session = `live-${process.pid}`;
 const browser = new Browser(['--session', session, '--cdp', cdp]);
 const report = { startedAt: new Date().toISOString(), transport: config.transport, requestedModel: config.model, probe: null, cases: [] };
 const cases = [
-  ...[undefined, 'click'].flatMap(op => ['Click Learn more link', '点击 Learn more 链接'].map(instruction => ({
-    name: `小页面链接 ${op ? '--op click' : '自动动作'} ${instruction}`, path: '/link', options: { op, instruction },
+  ...[undefined, 'click'].flatMap(op => ['Click Learn more link', 'click the Learn more link'].map(instruction => ({
+    name: `small page link ${op ? '--op click' : 'automatic action'} ${instruction}`, path: '/link', options: { op, instruction },
     assertion: async () => assert.equal((await browser.request(['get', 'text', '#destination'])).text, 'Link destination reached'),
   }))),
-  { name: 'dry-run', options: { op: 'click', instruction: '入住信息区域的确认按钮', dryRun: true },
-    assertion: async result => { assert.equal(result.data.status, 'resolved'); assert.equal((await browser.request(['get', 'text', '#result'])).text, '等待操作'); } },
-  { name: '中文同名按钮', options: { instruction: '点击入住信息区域里的确认按钮' },
-    assertion: async () => assert.equal((await browser.request(['get', 'text', '#result'])).text, '入住已确认') },
-  { name: '显式填写', options: { op: 'fill', instruction: '姓名输入框', value: ' 张三 $() ' },
-    assertion: async () => assert.equal((await browser.request(['get', 'value', '#name'])).value, ' 张三 $() ') },
-  { name: '引号原文绑定', options: { instruction: '在“姓名”输入框填写“李四”' },
-    assertion: async () => assert.equal((await browser.request(['get', 'value', '#name'])).value, '李四') },
-  { name: '中文勾选', options: { instruction: '勾选同意用户协议' },
+  { name: 'dry-run', options: { op: 'click', instruction: 'confirm button in the check-in details region', dryRun: true },
+    assertion: async result => { assert.equal(result.data.status, 'resolved'); assert.equal((await browser.request(['get', 'text', '#result'])).text, 'Waiting for action'); } },
+  { name: 'same-name buttons', options: { instruction: 'click the confirm button in the check-in details region' },
+    assertion: async () => assert.equal((await browser.request(['get', 'text', '#result'])).text, 'Check-in confirmed') },
+  { name: 'explicit fill', options: { op: 'fill', instruction: 'Name input', value: ' Jane Doe $() ' },
+    assertion: async () => assert.equal((await browser.request(['get', 'value', '#name'])).value, ' Jane Doe $() ') },
+  { name: 'quoted verbatim binding', options: { instruction: 'fill “John Smith” in the “Name” input' },
+    assertion: async () => assert.equal((await browser.request(['get', 'value', '#name'])).value, 'John Smith') },
+  { name: 'check a checkbox', options: { instruction: 'check I agree to the user agreement' },
     assertion: async () => assert.equal((await browser.request(['is', 'checked', '#agreement'])).checked, true) },
-  { name: '下拉标签', options: { op: 'select', instruction: '人数下拉框', value: '2人' },
+  { name: 'dropdown label', options: { op: 'select', instruction: 'Guests dropdown', value: '2 guests' },
     assertion: async () => assert.equal((await browser.request(['get', 'value', '#people'])).value, '2') },
-  { name: '读取区域文本', options: { op: 'get_text', instruction: '操作结果区域', scope: '#result' },
-    assertion: async result => assert.equal(result.data.result.text, '等待操作') },
-  { name: '目标不存在', options: { op: 'click', instruction: '删除订单按钮' }, error: 'NO_MATCH' },
-  { name: '同名歧义', options: { op: 'click', instruction: '确认按钮' }, error: 'AMBIGUOUS' },
-  { name: '多步拒绝', options: { instruction: '先在姓名输入框填写“王五”，然后点击入住信息的确认按钮' }, error: 'MULTI_STEP_UNSUPPORTED' },
-  { name: '否定指令', options: { instruction: '不要点击任何确认按钮' }, error: 'UNSUPPORTED_OPERATION' },
+  { name: 'read region text', options: { op: 'get_text', instruction: 'Action result region', scope: '#result' },
+    assertion: async result => assert.equal(result.data.result.text, 'Waiting for action') },
+  { name: 'target missing', options: { op: 'click', instruction: 'delete order button' }, error: 'NO_MATCH' },
+  { name: 'same-name ambiguity', options: { op: 'click', instruction: 'confirm button' }, error: 'AMBIGUOUS' },
+  { name: 'multi-step refused', options: { instruction: 'first fill “Alex Lee” in the Name input, then click the confirm button in check-in details' }, error: 'MULTI_STEP_UNSUPPORTED' },
+  { name: 'negated instruction', options: { instruction: 'do not click any confirm button' }, error: 'UNSUPPORTED_OPERATION' },
 ];
 
 try {
   const probe = new Jev(config);
-  const result = await probe.evaluate({ instruction: '选择北京' }, { city: choice('选择指令中的城市', { beijing: '北京', shanghai: '上海' }) });
+  const result = await probe.evaluate({ instruction: 'choose Beijing' }, { city: choice('Choose the city in the instruction', { beijing: 'Beijing', shanghai: 'Shanghai' }) });
   assert.equal(result.answers.city.choice, 'beijing');
   report.probe = probe.evidence;
   console.log(`API probe passed: ${result.model}`);
@@ -62,7 +62,7 @@ try {
       try {
         const result = await act({ probability: 0.8, margin: 0.2, ...item.options }, browser, jev);
         record.result = result;
-        assert.equal(item.error, undefined, `应拒绝执行：${item.error}`);
+        assert.equal(item.error, undefined, `Should have refused to run: ${item.error}`);
         assert.equal(result.data.status, item.options.dryRun ? 'resolved' : 'executed');
         await item.assertion(result);
         record.passed = true;
@@ -70,7 +70,7 @@ try {
         record.error = { code: error.code, message: error.message };
         record.passed = !!item.error && error.code === item.error;
         if (record.passed) {
-          assert.equal((await browser.request(['get', 'text', '#result'])).text, '等待操作');
+          assert.equal((await browser.request(['get', 'text', '#result'])).text, 'Waiting for action');
           assert.equal((await browser.request(['get', 'value', '#name'])).value, '');
           assert.equal((await browser.request(['is', 'checked', '#agreement'])).checked, false);
         }
@@ -83,11 +83,11 @@ try {
   });
   await browser.request(['open', `http://127.0.0.1:${server.address().port}`]);
   const cliStart = performance.now();
-  const cliRecord = { name: '真实 CLI 与 stdin', passed: false };
+  const cliRecord = { name: 'real CLI and stdin', passed: false };
   report.cases.push(cliRecord);
   const cliResult = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [fileURLToPath(new URL('../dist/cli.js', import.meta.url)),
-      '--cdp', cdp, '--json', 'page', 'act', session, '--non-interactive', '--op', 'fill', '姓名输入框', '--value-stdin'], {
+      '--cdp', cdp, '--json', 'page', 'act', session, '--non-interactive', '--op', 'fill', 'Name input', '--value-stdin'], {
       env: process.env, stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '', stderr = '';
@@ -104,13 +104,13 @@ try {
         resolve(cliRecord.result);
       } catch (error) { reject(error); }
     });
-    child.stdin.end('CLI 真实验证');
+    child.stdin.end('CLI live check');
   });
   assert.equal(cliResult.success, true);
   assert.equal(cliResult.data.status, 'executed');
-  assert.equal((await browser.request(['get', 'value', '#name'])).value, 'CLI 真实验证');
+  assert.equal((await browser.request(['get', 'value', '#name'])).value, 'CLI live check');
   cliRecord.passed = true;
-  console.log('PASS 真实 CLI 与 stdin');
+  console.log('PASS real CLI and stdin');
 } catch (error) {
   report.fatal = { code: error.code, message: error.message };
   console.error(`Live validation stopped: ${error.code || error.name} ${error.message}`);

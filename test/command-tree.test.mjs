@@ -60,7 +60,7 @@ test('scoped operations require an explicit valid session even when an environme
   process.env.JEV_BROWSER_SESSION = 'environment-default';
   try {
     for (const [input] of scoped) assert.throws(() => parseArgs(input.slice(0, 2)), { code: 'NEEDS_INPUT' });
-    for (const session of ['../demo', 'bad name', '会话', 'a'.repeat(49)])
+    for (const session of ['../demo', 'bad name', 'セッション', 'a'.repeat(49)])
       assert.throws(() => parseArgs(['page', 'snapshot', session]), { code: 'INVALID_SESSION' });
     assert.throws(() => parseArgs(['page', 'open', 'https://example.com']), { code: 'INVALID_SESSION' });
     assert.equal(parseArgs(['page', 'snapshot', 'chosen']).session, 'chosen');
@@ -71,21 +71,21 @@ test('scoped operations require an explicit valid session even when an environme
 
 test('global options keep their meaning; legacy routing options never override the positional session', () => {
   for (const args of [
-    ['--headed', '--json', 'page', 'act', 'demo', '点击搜索'],
-    ['page', '--headed', 'act', 'demo', '点击搜索', '--json'],
-    ['page', 'act', 'demo', '点击搜索', '--headed', '--json'],
+    ['--headed', '--json', 'page', 'act', 'demo', 'click search'],
+    ['page', '--headed', 'act', 'demo', 'click search', '--json'],
+    ['page', 'act', 'demo', 'click search', '--headed', '--json'],
   ]) {
     const result = parseArgs(args);
-    assert.equal(result.session, 'demo'); assert.equal(result.options.instruction, '点击搜索');
+    assert.equal(result.session, 'demo'); assert.equal(result.options.instruction, 'click search');
     assert.equal(result.json, true); assert.ok(result.globals.includes('--headed'));
   }
   for (const args of [
     ['--session', 'other', 'page', 'snapshot', 'demo'], ['page', '--session', 'other', 'snapshot', 'demo'],
-    ['page', 'snapshot', 'demo', '--session', 'other'], ['page', 'act', 'demo', '点击', '--session', 'other'],
+    ['page', 'snapshot', 'demo', '--session', 'other'], ['page', 'act', 'demo', 'click', '--session', 'other'],
     ['page', 'snapshot', 'demo', '--namespace', 'other'],
     ['page', 'snapshot', 'demo', '--session=other'], ['--session=other', 'page', 'snapshot', 'demo'],
   ]) assert.throws(() => parseArgs(args), { code: 'INVALID_ARGUMENT' });
-  const value = parseArgs(['page', 'act', 'demo', '--op', 'fill', '输入框', '--value', '--session']);
+  const value = parseArgs(['page', 'act', 'demo', '--op', 'fill', 'Text box', '--value', '--session']);
   assert.equal(value.options.value, '--session');
   assert.equal(parseArgs(['--restore', 'page', 'snapshot', 'demo']).session, 'demo');
 });
@@ -106,7 +106,7 @@ test('help shows positional sessions without authentication or native execution'
     ['page', 'act', '--help'], ['help', 'page', 'act'], ['tab', 'list', '--help'], ['session', 'inspect', '--help']]) {
     const result = spawnSync(process.execPath, ['dist/cli.js', ...args], { encoding: 'utf8', timeout: 5000 });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /用法/); assert.match(result.stdout, /会话名/);
+    assert.match(result.stdout, /Usage/); assert.match(result.stdout, /session name/);
     assert.doesNotMatch(result.stdout, /--session/);
   }
 });
@@ -143,6 +143,6 @@ test('CLI forwards the positional session to the executor and removes it from op
   const help = spawnSync(process.execPath, ['--import', hook, 'dist/cli.js', 'network', 'requests', '--help'],
     { env: { ...process.env, NODE_OPTIONS: '' }, encoding: 'utf8', timeout: 5000 });
   assert.equal(help.status, 0, help.stderr);
-  assert.match(help.stdout, /network requests <会话名> \[--json\]/);
-  assert.doesNotMatch(help.stdout, /requests <会话名> requests/);
+  assert.match(help.stdout, /network requests <session name> \[--json\]/);
+  assert.doesNotMatch(help.stdout, /requests <session name> requests/);
 });

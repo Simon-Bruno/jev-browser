@@ -31,21 +31,21 @@ globalThis.fetch = async (_url, init) => init.headers.Authorization === 'Bearer 
 const originalSubmit = Controller.prototype.submit;
 Controller.prototype.submit = async function(value) {
   // Input rendering only; never send fixture credentials to a real provider.
-  if (value === '中文输入') { this.log(value, 'user'); return; }
-  if (value === '测试确认') {
-    this.state.pending = { plan: { operation: 'click', target: { name: '测试按钮' } }, choices: [] };
+  if (value === 'カナテスト') { this.log(value, 'user'); return; }
+  if (value === 'test confirm') {
+    this.state.pending = { plan: { operation: 'click', target: { name: 'Test button' } }, choices: [] };
     this.emit('change'); return;
   }
   if (this.state.pending && ['yes', 'no'].includes(value)) {
     this.state.pending = undefined;
-    this.log(value === 'yes' ? '选择执行完成' : '选择取消完成'); return;
+    this.log(value === 'yes' ? 'Chose execute' : 'Chose cancel'); return;
   }
   return originalSubmit.call(this, value);
 };
 Browser.prototype.request = async function(args) {
   appendFileSync(%s, JSON.stringify(args) + '\\n');
   if (args[0] === 'session') return { active: true, runtime: { browserLaunched: true, connection: { kind: 'cdp', headless: null } } };
-  if (args[0] === 'tab' && args[1] === 'list') return { tabs: [{ tabId:'t7', targetId:'target7', title:'中文测试页', url:'https://example.test', active:true }] };
+  if (args[0] === 'tab' && args[1] === 'list') return { tabs: [{ tabId:'t7', targetId:'target7', title:'カナテストページ', url:'https://example.test', active:true }] };
   return {};
 };
 Browser.prototype.requestBatch = async function(commands) { return Promise.all(commands.map(args => this.request(args))); };
@@ -105,17 +105,17 @@ Browser.prototype.requestBatch = async function(commands) { return Promise.all(c
         started = time.monotonic()
         wait_for('Describe a browser action')
         first_screen = round((time.monotonic() - started) * 1000)
-        wait_for('t7 · 中文测试页')
+        wait_for('t7 · カナテストページ')
         wait_for('TypeSafe / jev-latest')
-        assert '[后退]' not in rendered()
+        assert '[Back]' not in rendered()
         assert 'Welcome to Jev' in rendered()
         # Chinese + combining character + grapheme deletion.
-        send('中文e\u0301')
+        send('カナe\u0301')
         send('\x7f')
-        enter('输入')
-        wait_for(' 中文输入')
-        assert '你 ›' not in rendered()
-        assert re.search(r'(?m)^ 中文输入 +\r?$', rendered())
+        enter('テスト')
+        wait_for(' カナテスト')
+        assert 'You ›' not in rendered()
+        assert re.search(r'(?m)^ カナテスト +\r?$', rendered())
         assert any(color in output for color in [b'\x1b[48;2;232;232;232m', b'\x1b[48;5;254m'])
         # Bracketed multiline paste must not execute any line.
         send('\x1b[200~/back\n/reload\x1b[201~')
@@ -140,7 +140,7 @@ Browser.prototype.requestBatch = async function(commands) { return Promise.all(c
         enter('/back')
         wait_for('Executed /back')
         enter('/tab')
-        wait_for('中文测试页 · https://example.test')
+        wait_for('カナテストページ · https://example.test')
         send('\r')
         wait_for('Executed /tab')
         enter('/connect')
@@ -150,15 +150,15 @@ Browser.prototype.requestBatch = async function(commands) { return Promise.all(c
         wait_for('/connect cdp')
         send('\x15')
         # Confirmation is answered entirely with arrows and Enter.
-        enter('测试确认')
+        enter('test confirm')
         wait_for('Execute this action')
         send('\x1b[B')
         send('\r')
-        wait_for('选择取消完成')
-        enter('测试确认')
+        wait_for('Chose cancel')
+        enter('test confirm')
         send('\r')
-        wait_for('选择执行完成')
-        assert '输入「确认」' not in rendered()
+        wait_for('Chose execute')
+        assert 'Enter "confirm"' not in rendered()
         # Resize a live terminal, then continue editing and exit.
         for width in (30, 120):
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 24, width, 0, 0))

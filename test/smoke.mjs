@@ -11,7 +11,7 @@ const html = await readFile(new URL('./fixtures/page.html', import.meta.url));
 const server = createServer((_req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const cdp = process.env.JEV_TEST_CDP;
-if (!cdp) { server.close(); throw Error('请设置 JEV_TEST_CDP，指向独立测试浏览器。'); }
+if (!cdp) { server.close(); throw Error('Set JEV_TEST_CDP to point at a separate test browser.'); }
 const session = `smoke-${process.pid}`;
 const browser = new Browser(['--session', session, '--cdp', cdp]);
 const reports = [];
@@ -32,7 +32,7 @@ function modelFor(targetDescription) {
 
 async function perform(options, predicate) {
   process.stderr.write(`smoke: ${options.op}${options.dryRun ? ' dry-run' : ''}\n`);
-  const result = await act({ instruction: '测试目标', probability: 0.8, margin: 0.2, ...options }, browser, modelFor(predicate));
+  const result = await act({ instruction: 'test target', probability: 0.8, margin: 0.2, ...options }, browser, modelFor(predicate));
   reports.push({ operation: options.op, status: result.data.status, timings: result.meta.timings });
   return result;
 }
@@ -42,42 +42,42 @@ try {
     await browser.request(['open', `http://127.0.0.1:${server.address().port}`]);
     const first = await browser.request(['snapshot']);
     assert.equal(typeof first.pageId, 'string');
-    await perform({ op: 'click', dryRun: true }, text => text.includes('入住信息') && text.includes('按钮「确认」'));
-    assert.equal((await browser.request(['get', 'text', '#result'])).text, '等待操作');
-    const exact = ' 张三 $(echo untouched)\n';
-    await perform({ op: 'fill', value: exact }, text => text.includes('输入框「姓名」'));
+    await perform({ op: 'click', dryRun: true }, text => text.includes('Check-in details') && text.includes('Button "Confirm"'));
+    assert.equal((await browser.request(['get', 'text', '#result'])).text, 'Waiting for action');
+    const exact = ' Jane Doe $(echo untouched)\n';
+    await perform({ op: 'fill', value: exact }, text => text.includes('Text box "Name"'));
     // input[type=text] normalizes newlines itself; use a value without a newline for the independent assertion.
     assert.equal((await browser.request(['get', 'value', '#name'])).value, exact.replace(/\n/g, ''));
     // Appending must preserve a selected value and place new text at its end.
     await browser.request(['eval', 'document.querySelector("#name").select()']);
-    await perform({ op: 'type', value: '追加' }, text => text.includes('输入框「姓名」'));
-    assert.equal((await browser.request(['get', 'value', '#name'])).value, exact.replace(/\n/g, '') + '追加');
+    await perform({ op: 'type', value: 'appended' }, text => text.includes('Text box "Name"'));
+    assert.equal((await browser.request(['get', 'value', '#name'])).value, exact.replace(/\n/g, '') + 'appended');
     await browser.request(['eval', `(() => {
       const note = document.createElement('textarea');
-      note.id = 'note'; note.setAttribute('aria-label', '多行备注'); note.value = '第一行\\n第二行';
+      note.id = 'note'; note.setAttribute('aria-label', 'Multiline note'); note.value = 'First line\\nSecond line';
       document.body.append(note); note.focus(); note.setSelectionRange(0, 2);
       const rich = document.createElement('div');
       rich.id = 'rich'; rich.contentEditable = 'true'; rich.setAttribute('role', 'textbox');
-      rich.setAttribute('aria-label', '富文本备注'); rich.innerHTML = '<b>原文</b>'; document.body.append(rich);
+      rich.setAttribute('aria-label', 'Rich text note'); rich.innerHTML = '<b>Original</b>'; document.body.append(rich);
     })()`]);
-    await perform({ op: 'type', value: '追加' }, text => text.includes('输入框「多行备注」'));
-    assert.equal((await browser.request(['get', 'value', '#note'])).value, '第一行\n第二行追加');
-    await perform({ op: 'type', value: '追加' }, text => text.includes('输入框「富文本备注」'));
-    assert.equal((await browser.request(['get', 'text', '#rich'])).text, '原文追加');
-    await perform({ op: 'fill', value: 'secret-123', valueStdin: true }, text => text.includes('输入框「密码」'));
+    await perform({ op: 'type', value: 'appended' }, text => text.includes('Text box "Multiline note"'));
+    assert.equal((await browser.request(['get', 'value', '#note'])).value, 'First line\nSecond lineappended');
+    await perform({ op: 'type', value: 'appended' }, text => text.includes('Text box "Rich text note"'));
+    assert.equal((await browser.request(['get', 'text', '#rich'])).text, 'Originalappended');
+    await perform({ op: 'fill', value: 'secret-123', valueStdin: true }, text => text.includes('Text box "Password"'));
     assert.equal((await browser.request(['get', 'value', '#password'])).value, 'secret-123');
-    await perform({ op: 'check' }, text => text.includes('同意用户协议'));
+    await perform({ op: 'check' }, text => text.includes('I agree to the user agreement'));
     assert.equal((await browser.request(['is', 'checked', '#agreement'])).checked, true);
-    await perform({ op: 'uncheck' }, text => text.includes('同意用户协议'));
+    await perform({ op: 'uncheck' }, text => text.includes('I agree to the user agreement'));
     assert.equal((await browser.request(['is', 'checked', '#agreement'])).checked, false);
-    await perform({ op: 'select', value: '2人' }, text => text.includes('人数'));
+    await perform({ op: 'select', value: '2 guests' }, text => text.includes('Guests'));
     assert.equal((await browser.request(['get', 'value', '#people'])).value, '2');
-    await perform({ op: 'click' }, text => text.includes('入住信息') && text.includes('按钮「确认」'));
-    assert.equal((await browser.request(['get', 'text', '#result'])).text, '入住已确认');
-    const read = await perform({ op: 'get_text', scope: '#result' }, text => text.startsWith('status「操作结果」'));
-    assert.equal(read.data.result.text, '入住已确认');
-    const text = await perform({ op: 'get_text', scope: '#result' }, text => text.startsWith('文本「入住已确认」'));
-    assert.equal(text.data.result.text, '入住已确认');
+    await perform({ op: 'click' }, text => text.includes('Check-in details') && text.includes('Button "Confirm"'));
+    assert.equal((await browser.request(['get', 'text', '#result'])).text, 'Check-in confirmed');
+    const read = await perform({ op: 'get_text', scope: '#result' }, text => text.startsWith('status "Action result"'));
+    assert.equal(read.data.result.text, 'Check-in confirmed');
+    const text = await perform({ op: 'get_text', scope: '#result' }, text => text.startsWith('Text "Check-in confirmed"'));
+    assert.equal(text.data.result.text, 'Check-in confirmed');
   });
   console.log(JSON.stringify({ success: true, model: 'synthetic', reports }, null, 2));
 } finally {

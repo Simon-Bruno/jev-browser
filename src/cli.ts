@@ -7,49 +7,49 @@ import { JevError, failure } from './errors.js';
 import { withSession } from './session.js';
 import { ensureLogin, handleAuth } from './auth.js';
 
-const help = `jev-browser 0.2.0 — Jev 语义浏览器 CLI
+const help = `jev-browser 0.2.0-stellar: Jev semantic browser CLI
 
-用法：jev-browser [全局参数] <资源> <动作> [会话名] [对象] [选项]
+Usage: jev-browser [global options] <resource> <action> [session name] [target] [options]
 
-  page open <会话名> <url>            打开页面；缺少本地 Chrome 时自动准备
-  page snapshot demo --json       读取结构化页面快照
-  element click demo @e1          确定性命令，不调用模型
-  page act demo "点击入住信息的确认" 选择并执行一次操作
-  page act demo "搜索 jev"        并行判断输入框、内容、清空和提交
-  page act demo --op fill "姓名" --value "张三"
-  page act demo --op fill "密码" --value-stdin
-  page act demo "点击确认" --dry-run --json
-  page act demo --confirm <编号>  确认执行已展示的计划
-  page act demo --cancel <编号>   取消待确认计划
-  session close <会话名>    关闭指定会话，例如 session close demo
-  session clear             关闭全部会话并清除标签页绑定，无需会话名
-  session list              列出运行中的会话
-  auth login                登录
-  auth login --with-token    从标准输入登录
-  auth status / auth logout <提供方>             查看来源 / 删除本地 Key
+  page open <session name> <url>                  Open a page; sets up local Chrome if missing
+  page snapshot demo --json                       Read a structured page snapshot
+  element click demo @e1                          Deterministic command, no model call
+  page act demo "click the check-in confirm"      Choose and run one action
+  page act demo "search jev"                      Judge field, value, clearing and submit in parallel
+  page act demo --op fill "Name" --value "Jane Doe"
+  page act demo --op fill "Password" --value-stdin
+  page act demo "click confirm" --dry-run --json
+  page act demo --confirm <id>                    Run a plan that was shown
+  page act demo --cancel <id>                     Cancel a pending plan
+  session close <session name>                    Close a session, e.g. session close demo
+  session clear                                   Close all sessions and clear tab bindings, no session name
+  session list                                    List running sessions
+  auth login                                      Log in
+  auth login --with-token                         Log in from stdin
+  auth status / auth logout <provider>            Show sources / delete the local key
 
-资源命令：
+Resource commands:
 ${resourceOverview()}
 
-page act：--op、--value、--value-stdin、--scope <CSS>、--dry-run
-     --non-interactive（不提示交互、不保存待确认计划）
-     --min-probability <0..1>（默认 0.80）、--min-margin <0..1>（默认 0.20）
-page act 退出码：0 完成或预览/取消；1 错误；2 待确认；3 执行未知或已派发后出错。
+page act: --op, --value, --value-stdin, --scope <CSS>, --dry-run
+     --non-interactive (no prompts, no pending plans saved)
+     --min-probability <0..1> (default 0.80), --min-margin <0..1> (default 0.20)
+page act exit codes: 0 done, previewed or cancelled; 1 error; 2 needs confirmation; 3 outcome unknown or error after dispatch.
 ${browserOptionsHelp}
-会话：浏览器操作必须在动作后填写会话名，例如 page act demo "搜索 jev"。
-查看参数：jev-browser <资源> <动作> --help
-命令别名：jevb 与 jev-browser 等价。
-交互模式：终端中直接运行 jevb，或使用 jevb tui；参数见 jevb tui --help。
+Sessions: browser actions need a session name after the action, e.g. page act demo "search jev".
+Options: jev-browser <resource> <action> --help
+Alias: jevb is the same as jev-browser.
+Interactive mode: run jevb in a terminal, or use jevb tui; see jevb tui --help for options.
 
-首次使用时会提示登录。
+You will be asked to log in on first use.
 `;
 
-const closeHelp = `用法：jev-browser session close <会话名>
+const closeHelp = `Usage: jev-browser session close <session name>
 
-  jev-browser session close demo     关闭 demo 会话
-  jev-browser session clear          关闭全部会话并清除标签页绑定
+  jev-browser session close demo     Close the demo session
+  jev-browser session clear          Close all sessions and clear tab bindings
 
-close 必须填写会话名；关闭全部会话请使用 session clear。连接自己的 Chrome 时只断开控制连接。
+close needs a session name; use session clear to close all sessions. With your own Chrome, only the control connection is closed.
 `;
 
 async function stdinValue(): Promise<string> {
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     const result = await browser.run([parsed.name === 'help' || !parsed.name ? '--help' : parsed.name, ...parsed.rest]);
     const action = parsed.commandPath?.split(' ')[1];
     const nativeCommand = `${parsed.name}${action && parsed.rest[0] === action ? ` ${action}` : ''}`;
-    const text = parsed.commandPath ? result.stdout.replaceAll(`agent-browser ${nativeCommand}`, `jev-browser ${parsed.commandPath}${parsed.sessionRequired ? ' <会话名>' : ''}`) : result.stdout;
+    const text = parsed.commandPath ? result.stdout.replaceAll(`agent-browser ${nativeCommand}`, `jev-browser ${parsed.commandPath}${parsed.sessionRequired ? ' <session name>' : ''}`) : result.stdout;
     process.stdout.write(text.replaceAll('agent-browser', 'jev-browser') + connectionHelp(parsed.commandPath?.split(' ')[0] ?? ''));
     process.stderr.write(result.stderr);
     process.exitCode = result.code;

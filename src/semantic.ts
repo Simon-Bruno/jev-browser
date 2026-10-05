@@ -38,7 +38,7 @@ function uncertainty(answer: Answer, context: { subject: string; labels: Record<
   const margin = probability - Math.max(0, ...ranked.filter(([id]) => id !== answer.choice).map(([, p]) => p));
   if (probability >= options.probability && margin >= options.margin) return;
   return { subject: context.subject, probability, margin,
-    message: margin < options.margin ? `关于「${context.subject}」，有多个接近的可能，请核对准备执行的操作。` : `关于「${context.subject}」，还不够确定，请核对后确认。`,
+    message: margin < options.margin ? `For "${context.subject}", several options are close. Check the action before it runs.` : `For "${context.subject}", the choice is not certain enough. Check it, then confirm.`,
     alternatives: ranked.filter(([, p]) => p > 0).slice(0, 3).map(([id, p]) => ({ label: context.labels[id] ?? id, probability: p,
       ...(options.interactive && /^e\d+$/.test(id) ? { ref: id } : {}) })) };
 }
@@ -68,7 +68,7 @@ async function prepare(options: ActOptions, browser: Browser, jev: Jev): Promise
       const choices = Object.entries(answer.probabilities).filter(([key]) => /^e\d+$/.test(key))
         .sort((a, b) => b[1] - a[1]).slice(0, 3);
       if (choices.length) {
-        uncertainties.push({ subject, message: '请选择具体目标。', probability: 0, margin: 0,
+        uncertainties.push({ subject, message: 'Choose a specific target.', probability: 0, margin: 0,
           alternatives: choices.map(([ref, probability]) => ({ ref, label: labels[ref], probability })) });
         return choices[0][0];
       }
@@ -83,12 +83,12 @@ async function prepare(options: ActOptions, browser: Browser, jev: Jev): Promise
     if (issue) uncertainties.push(issue);
     return answer.choice;
   };
-  const intent = options.op ?? pick('operation', '要执行的动作');
+  const intent = options.op ?? pick('operation', 'action to run');
   if (tabGone && intent !== 'open') throw tabGone;
   if (intent === 'multi_step') throw new JevError('MULTI_STEP_UNSUPPORTED', 'Multiple independent actions are not supported. Split them into separate commands; typing and submitting the same input can be combined.');
   if (intent === 'unsupported') throw new JevError('UNSUPPORTED_OPERATION', 'The instruction prohibits execution or does not describe a supported browser action. No action was taken.');
-  const clear = intent === 'input' ? pick('clear', '是否清空原有内容') === 'true' : intent === 'fill';
-  const submit = intent === 'input' ? pick('submit', '是否输入后回车提交') === 'true' : false;
+  const clear = intent === 'input' ? pick('clear', 'whether to clear existing content') === 'true' : intent === 'fill';
+  const submit = intent === 'input' ? pick('submit', 'whether to press Enter after typing') === 'true' : false;
   const op = intent === 'input' ? (clear ? 'fill' : 'type') : operation(intent);
   if (options.valueStdin && !['fill', 'type', 'select'].includes(op)) throw new JevError('INVALID_VALUE', '--value-stdin is only supported for fill, type, and select.');
   if (!needsValue.has(op) && options.value !== undefined) throw new JevError('INVALID_VALUE', 'This action does not accept --value.');
@@ -96,7 +96,7 @@ async function prepare(options: ActOptions, browser: Browser, jev: Jev): Promise
   let candidates: Candidate[] = [];
   if (!targetless.has(op)) {
     candidates = candidatesFor(before, op);
-    const ref = pick(intent === 'input' ? 'input_target' : 'target', intent === 'input' ? '要使用的输入框' : '要操作的目标');
+    const ref = pick(intent === 'input' ? 'input_target' : 'target', intent === 'input' ? 'input to use' : 'target to act on');
     target = candidates.find(c => c.ref === ref);
     if (!target) throw new JevError('INVALID_TARGET', 'The selected target does not support this action. No action was taken.');
   }
@@ -105,7 +105,7 @@ async function prepare(options: ActOptions, browser: Browser, jev: Jev): Promise
     const id = !options.op && op === 'open' ? 'url' : !options.op && op === 'press' ? 'key' : !options.op && op === 'scroll' ? 'direction' : 'value';
     if (op === 'open' && ['none', 'ambiguous'].includes(asChoice(answers[id]).choice))
       throw new JevError('NEEDS_URL', 'Could not resolve the destination. Provide a full URL starting with https:// or http://. No action was taken.');
-    const selected = pick(id, op === 'open' ? '要打开的网站或网址' : '要输入或使用的内容');
+    const selected = pick(id, op === 'open' ? 'website or URL to open' : 'value to type or use');
     value = op === 'press' || op === 'scroll' ? selected : op === 'open' && Object.hasOwn(sites, selected)
       ? sites[selected].url : built.questions[id].criteria[selected];
   }
@@ -144,12 +144,12 @@ export async function validatePlan(plan: Plan, browser: Browser): Promise<void> 
 export function planResult(plan: Plan, status: 'needs_confirmation' | 'resolved' | 'executed' | 'cancelled', result?: unknown) {
   return { success: true, data: { status, operation: plan.operation, target: plan.target,
     session: plan.before.pageContext?.session, pageContext: plan.afterPage ?? plan.before.pageContext,
-    plan: { page: plan.newTab ? '新标签页' : plan.before.origin,
-      action: plan.newTab ? '新建标签页并打开网页' : operations[plan.operation],
+    plan: { page: plan.newTab ? 'New tab' : plan.before.origin,
+      action: plan.newTab ? 'Open the page in a new tab' : operations[plan.operation],
       ...(plan.newTab ? { newTab: true } : {}),
       tabId: plan.before.pageContext?.tabId, title: plan.before.pageContext?.title,
       target: plan.target ? describe(plan.target) : undefined,
-      value: plan.value === undefined ? undefined : plan.hiddenValue ? '（输入内容已隐藏）' : plan.value,
+      value: plan.value === undefined ? undefined : plan.hiddenValue ? '(input hidden)' : plan.value,
       clear: ['fill', 'type'].includes(plan.operation) ? plan.operation === 'fill' : undefined,
       submit: plan.submit }, uncertainties: plan.uncertainties,
     result: plan.operation === 'get_text' ? result : undefined }, meta: plan.meta };

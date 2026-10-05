@@ -7,7 +7,7 @@ export const commands = [
   ['new', 'New tab [url]'], ['close', 'Close tab [id]'], ['provider', 'Provider [auto|typesafe|openrouter]'],
   ['status', 'Show status'], ['clear', 'Clear display'], ['reset', 'Reset context'], ['help', 'Help'],
 ] as const;
-export const aliases: Record<string, string> = { 后退: '/back', 前进: '/go', 刷新: '/reload', 上滚: '/up', 下滚: '/down' };
+export const aliases: Record<string, string> = {};
 const legacy: Record<string, string> = { forward: 'go', quit: 'exit', tabs: 'tab', browser: 'connect' };
 export const commandHelp = commands.map(([name, label]) => `/${name}  ${label}`).join('\n');
 

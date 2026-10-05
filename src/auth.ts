@@ -3,21 +3,21 @@ import { credentialStatus, keyNames, providers, readCredentials, saveCredential,
 import { JevError } from './errors.js';
 import { readToken } from './token-input.js';
 
-const help = `账号：
-  jev-browser auth login                         登录
-  jev-browser auth login [typesafe|openrouter] --with-token  从标准输入登录
-  jev-browser auth status [--json]                查看登录状态
-  jev-browser auth logout typesafe|openrouter      删除本地 Key
-  jev-browser auth login <会话名> <网站账号名>      在指定会话登录已保存的网站账号
+const help = `Accounts:
+  jev-browser auth login                                    Log in
+  jev-browser auth login [typesafe|openrouter] --with-token Log in from stdin
+  jev-browser auth status [--json]                          Show login status
+  jev-browser auth logout typesafe|openrouter               Delete the local key
+  jev-browser auth login <session name> <site account>      Log in to a saved website account in a session
 `;
 
 export async function ensureLogin(nonInteractive = false): Promise<void> {
   if (credentialStatus().selected) return;
   if (nonInteractive) throw new JevError('MISSING_API_KEY', 'Run jevb auth login before using --non-interactive.');
-  process.stderr.write('请先登录。\n');
+  process.stderr.write('Please log in first.\n');
   const key = await readToken(false);
   await login(key.startsWith('sk') ? 'openrouter' : 'typesafe', key);
-  process.stderr.write('登录成功。\n');
+  process.stderr.write('Logged in.\n');
 }
 
 export async function login(provider: Provider, key: string, options: { env?: NodeJS.ProcessEnv; request?: typeof fetch } = {}) {
@@ -66,9 +66,9 @@ export async function handleAuth(args: string[], json = false): Promise<boolean>
     await saveCredential(provider as Provider, undefined);
     data = { removed: provider, ...credentialStatus() };
   } else data = credentialStatus();
-  process.stdout.write(json ? JSON.stringify({ success: true, data }) + '\n' : command === 'login' ? '登录成功。\n' :
-    `${command === 'logout' ? '已删除本地 Key；环境变量仍可生效。\n' : ''}` +
-    `当前提供方：${data.selected ?? '未配置'}\n` +
-    data.providers.map(item => `${item.provider}: ${item.source}（本地${item.stored ? '已保存' : '未保存'}）`).join('\n') + '\n');
+  process.stdout.write(json ? JSON.stringify({ success: true, data }) + '\n' : command === 'login' ? 'Logged in.\n' :
+    `${command === 'logout' ? 'Deleted the local key; environment variables still apply.\n' : ''}` +
+    `Current provider: ${data.selected ?? 'not configured'}\n` +
+    data.providers.map(item => `${item.provider}: ${item.source} (local: ${item.stored ? 'saved' : 'not saved'})`).join('\n') + '\n');
   return true;
 }

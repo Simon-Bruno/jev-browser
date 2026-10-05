@@ -30,7 +30,7 @@ jev-browser page act task-demo --json --op scroll 'Scroll down' --value down
 
 `--scope` is a confirmed CSS selector. `--dry-run` selects and checks a target without acting. Semantic `scroll` moves 500 px in `up`, `down`, `left`, or `right`. Semantic `press` accepts common keys such as Enter, Tab, Escape, arrows, and `Control+a`/`Meta+a`; use help and atomic `press` for additional key syntax.
 
-Without `--op`, action, input target, source value, clearing, and submission judgments share one model request. Only relevant branches affect execution. `page act demo '搜索 jev'` can fill the search field and press Enter. Explicit `--op fill/type` keeps its atomic behavior and does not submit. Values supplied through `--value` or stdin are not sent to the model or echoed.
+Without `--op`, action, input target, source value, clearing, and submission judgments share one model request. Only relevant branches affect execution. `page act demo 'search jev'` can fill the search field and press Enter. Explicit `--op fill/type` keeps its atomic behavior and does not submit. Values supplied through `--value` or stdin are not sent to the model or echoed.
 
 When `data.status` is `needs_confirmation`, inspect `data.plan` and `data.uncertainties` and obtain the user's decision before using the returned `confirmation.confirmCommand` or `confirmation.cancelCommand`. Do not automatically confirm or lower thresholds. The ID expires after five minutes, is bound to the original session, and is consumed once. Confirmation reuses the displayed plan without a new model call and revalidates the page and target. `--dry-run` does not create a confirmation ID.
 
@@ -49,7 +49,7 @@ JSON results preserve available model evidence in `meta.decisions`, including `N
 
 ```bash
 jev-browser page act ci-demo --json --non-interactive --op click 'Learn more link'
-jev-browser page act task-demo --json '搜索 jev'
+jev-browser page act task-demo --json 'search jev'
 jev-browser page act task-demo --json --confirm <confirmation-id>
 jev-browser page act task-demo --json --cancel <confirmation-id>
 ```

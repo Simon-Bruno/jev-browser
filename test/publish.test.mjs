@@ -4,7 +4,7 @@ import { publish } from '../scripts/publish.mjs';
 
 const env = { npm_command: 'run-script', npm_execpath: '/npm path/npm-cli.js' };
 
-test('发布前构建和校验，保留 dry-run 与 registry 参数且禁止递归脚本', () => {
+test('builds and checks before publishing, keeps dry-run and registry options, and blocks recursive scripts', () => {
   const calls = [];
   const args = ['--dry-run', '--tag', 'next', '--registry', 'https://registry.example.test'];
   const status = publish({ env, args }, (command, arguments_, options) => {
@@ -20,7 +20,7 @@ test('发布前构建和校验，保留 dry-run 与 registry 参数且禁止递�
   assert.ok(calls.every(c => c.command === process.execPath && c.options.shell === false));
 });
 
-test('每个准备阶段失败都立即停止，不触发上传', () => {
+test('any preparation failure stops at once without uploading', () => {
   for (let failureAt = 0; failureAt < 4; failureAt++) {
     let count = 0;
     const status = publish({ env, args: [] }, () => ({ status: count++ === failureAt ? 7 : 0 }));
@@ -29,20 +29,20 @@ test('每个准备阶段失败都立即停止，不触发上传', () => {
   }
 });
 
-test('发布进程失败或被中断时返回非零状态', () => {
+test('returns non-zero when the publish process fails or is interrupted', () => {
   for (const status of [3, null]) {
     let count = 0;
     assert.equal(publish({ env, args: [] }, () => ({ status: ++count === 5 ? status : 0 })), status ?? 1);
   }
 });
 
-test('直接 npm publish 的生命周期钩子不再次发布', () => {
+test('lifecycle hooks of a direct npm publish do not publish again', () => {
   assert.equal(publish({ env: { ...env, npm_command: 'publish' }, args: [] }, () => {
-    throw Error('生命周期钩子不应启动子进程');
+    throw Error('Lifecycle hook should not start a child process');
   }), 0);
 });
 
-test('缺少 npm 上下文或无法启动子进程时不继续发布', () => {
+test('does not publish without npm context or when a child process cannot start', () => {
   assert.throws(() => publish({ env: {}, args: [] }), /npm run publish/);
   assert.throws(() => publish({ env, args: [] }, () => ({ error: new Error('spawn failed') })), /spawn failed/);
 });

@@ -9,10 +9,10 @@ import { JevError } from '../dist/errors.js';
 import { sites } from '../dist/sites.js';
 
 const data = () => ({ origin: 'http://localhost/', pageId: 'p1', frameId: null,
-  snapshot: '- document\n  - region "入住信息":\n    - button "确认" [ref=e1]\n    - textbox "姓名" [ref=e2]\n  - region "发票信息":\n    - button "确认" [ref=e3]',
-  refs: { e1: { role: 'button', name: '确认', backendNodeId: 1 }, e2: { role: 'textbox', name: '姓名', backendNodeId: 2 }, e3: { role: 'button', name: '确认', backendNodeId: 3 } },
+  snapshot: '- document\n  - region "Check-in details":\n    - button "Confirm" [ref=e1]\n    - textbox "Name" [ref=e2]\n  - region "Invoice details":\n    - button "Confirm" [ref=e3]',
+  refs: { e1: { role: 'button', name: 'confirm', backendNodeId: 1 }, e2: { role: 'textbox', name: 'Name', backendNodeId: 2 }, e3: { role: 'button', name: 'confirm', backendNodeId: 3 } },
 });
-const options = (extra = {}) => ({ instruction: '入住信息的确认按钮', op: 'click', probability: 0.8, margin: 0.2, ...extra });
+const options = (extra = {}) => ({ instruction: 'confirm button in check-in details', op: 'click', probability: 0.8, margin: 0.2, ...extra });
 function setup(selections, changed) {
   const requests = [], commands = [];
   let snapshots = 0;
@@ -32,7 +32,7 @@ function setup(selections, changed) {
     commands.push({ args, config });
     if (args[0] === 'snapshot') { snapshots++; return snapshots > 1 && changed ? changed : data(); }
     if (args[0] === 'is') return { visible: true, enabled: true };
-    return { text: '订单金额 100', value: args.at(-1) };
+    return { text: 'Order total 100', value: args.at(-1) };
   } };
   browser.requestBatch = async args => {
     const results = [];
@@ -42,22 +42,22 @@ function setup(selections, changed) {
   return { jev, browser, requests, commands };
 }
 
-test('同名按钮保留区域，选择正确目标只派发一次', async () => {
+test('same-name buttons keep their region; the right target is dispatched once', async () => {
   const s = setup({ target: 'e1' });
   const result = await act(options(), s.browser, s.jev);
   assert.equal(result.data.status, 'executed');
-  assert.match(s.requests[0].questions.target.criteria.e1, /入住信息/);
-  assert.match(s.requests[0].questions.target.criteria.e3, /发票信息/);
+  assert.match(s.requests[0].questions.target.criteria.e1, /Check-in details/);
+  assert.match(s.requests[0].questions.target.criteria.e3, /Invoice details/);
   assert.deepEqual(s.commands.filter(c => c.config?.dispatch).map(c => c.args), [['click', '@e1']]);
 });
 
-test('dry-run 观察与复核后不派发', async () => {
+test('dry-run observes and rechecks without dispatching', async () => {
   const s = setup({ target: 'e1' });
   assert.equal((await act(options({ dryRun: true }), s.browser, s.jev)).data.status, 'resolved');
   assert.equal(s.commands.filter(c => c.config?.dispatch).length, 0);
 });
 
-test('隐藏或禁用目标仍拒绝执行，读取和滚入视口仅检查可见性', async () => {
+test('hidden or disabled targets are refused; reading and scrolling into view only check visibility', async () => {
   for (const state of [{ visible: false, enabled: true }, { visible: true, enabled: false }]) {
     const s = setup({ target: 'e1' });
     const original = s.browser.request;
@@ -76,7 +76,7 @@ test('隐藏或禁用目标仍拒绝执行，读取和滚入视口仅检查可�
   }
 });
 
-test('填写后或聚焦后禁用目标，仍停止后续提交且不重放', async () => {
+test('a target disabled after fill or focus still stops the later submit without replay', async () => {
   for (const disableAfter of ['fill', 'focus']) {
     const s = setup({ operation: 'input', input_target: 'e2', clear: 1, submit: 1, value: 'v0' });
     const original = s.browser.request;
@@ -86,16 +86,16 @@ test('填写后或聚焦后禁用目标，仍停止后续提交且不重放', as
       if (args[0] === 'is' && args[1] === 'enabled') return { enabled: !disabled };
       return original(args, config);
     };
-    await assert.rejects(act(options({ op: undefined, instruction: '搜索 jev' }), s.browser, s.jev),
+    await assert.rejects(act(options({ op: undefined, instruction: 'search jev' }), s.browser, s.jev),
       { code: 'STALE_TARGET', dispatched: true });
     assert.deepEqual(s.commands.filter(c => c.config?.dispatch).map(c => c.args[0]),
       disableAfter === 'fill' ? ['fill'] : ['fill', 'focus']);
   }
 });
 
-test('预览保留会话标签页标题，执行后报告新绑定页面', async () => {
-  const before = { session: 'demo', tabId: 't1', targetId: 'target1', title: '搜索页', url: 'http://localhost/' };
-  const after = { ...before, tabId: 't2', targetId: 'target2', title: '详情页', url: 'http://localhost/detail' };
+test('preview keeps the session tab title; execution reports the newly bound page', async () => {
+  const before = { session: 'demo', tabId: 't1', targetId: 'target1', title: 'Search page', url: 'http://localhost/' };
+  const after = { ...before, tabId: 't2', targetId: 'target2', title: 'Details page', url: 'http://localhost/detail' };
   for (const dryRun of [true, false]) {
     const s = setup({ target: 'e1' });
     const original = s.browser.request;
@@ -106,17 +106,17 @@ test('预览保留会话标签页标题，执行后报告新绑定页面', async
     const result = await act(options({ dryRun }), s.browser, s.jev);
     assert.equal(result.data.session, 'demo');
     assert.equal(result.data.plan.tabId, 't1');
-    assert.equal(result.data.plan.title, '搜索页');
+    assert.equal(result.data.plan.title, 'Search page');
     assert.deepEqual(result.data.pageContext, dryRun ? before : after);
   }
 });
 
-test('none、歧义、多步、否定不执行', async () => {
+test('none, ambiguous, multi-step and negated instructions do not run', async () => {
   for (const [selections, opts, code] of [
     [{ target: 'none' }, options(), 'NO_MATCH'],
     [{ target: 'ambiguous' }, options(), 'AMBIGUOUS'],
-    [{ operation: 'multi_step' }, options({ op: undefined, instruction: '点击确认再填写姓名' }), 'MULTI_STEP_UNSUPPORTED'],
-    [{ operation: 'unsupported' }, options({ op: undefined, instruction: '不要点击确认' }), 'UNSUPPORTED_OPERATION'],
+    [{ operation: 'multi_step' }, options({ op: undefined, instruction: 'click confirm and then fill in the name' }), 'MULTI_STEP_UNSUPPORTED'],
+    [{ operation: 'unsupported' }, options({ op: undefined, instruction: 'do not click confirm' }), 'UNSUPPORTED_OPERATION'],
   ]) {
     const s = setup(selections);
     await assert.rejects(act(opts, s.browser, s.jev), { code });
@@ -124,9 +124,9 @@ test('none、歧义、多步、否定不执行', async () => {
   }
 });
 
-test('页面切换、节点替换、上下文变化均拒绝', async () => {
+test('page switches, node replacement and context changes are all refused', async () => {
   for (const mutate of [d => { d.pageId = 'p2'; }, d => { d.refs.e1.backendNodeId = 99; },
-    d => { d.snapshot = d.snapshot.replace('入住信息', '支付信息'); }, d => { d.frameId = 'other'; }]) {
+    d => { d.snapshot = d.snapshot.replace('Check-in details', 'Payment details'); }, d => { d.frameId = 'other'; }]) {
     const changed = data(); mutate(changed);
     const s = setup({ target: 'e1' }, changed);
     await assert.rejects(act(options(), s.browser, s.jev), { code: 'STALE_TARGET' });
@@ -134,71 +134,71 @@ test('页面切换、节点替换、上下文变化均拒绝', async () => {
   }
 });
 
-test('原文值选择与目标独立，空白、换行、shell 字符保持原样', async () => {
+test('verbatim value choice is independent of the target; whitespace, newlines and shell characters are kept', async () => {
   const secret = '  x; $(touch nope) `a`\n';
   const s = setup({ target: 'e2' });
-  const result = await act(options({ op: 'fill', instruction: '姓名', value: secret, valueStdin: true }), s.browser, s.jev);
+  const result = await act(options({ op: 'fill', instruction: 'Name', value: secret, valueStdin: true }), s.browser, s.jev);
   assert.equal(s.commands.at(-1).args[2], secret);
   assert.equal(JSON.stringify(s.requests).includes(secret), false);
   assert.equal(JSON.stringify(result).includes('touch nope'), false);
   const q = setup({ operation: 'input', target: 'e2', value: 'v1' });
-  await act(options({ op: undefined, instruction: '在“姓名”中填写“张三”' }), q.browser, q.jev);
-  assert.deepEqual(q.commands.at(-1).args, ['fill', '@e2', '张三']);
+  await act(options({ op: undefined, instruction: 'set “Name” to “Jane Doe”' }), q.browser, q.jev);
+  assert.deepEqual(q.commands.at(-1).args, ['fill', '@e2', 'Jane Doe']);
   assert.equal(q.requests.length, 1);
   for (const key of ['operation', 'input_target', 'clear', 'submit', 'value']) assert.ok(q.requests[0].questions[key]);
 });
 
-test('已知动作时，目标与原文值在一次请求中批量判断', async () => {
+test('with a known action, target and verbatim value are judged in one request', async () => {
   const s = setup({ target: 'e2', value: 'v1' });
-  await act(options({ op: 'fill', instruction: '在“姓名”中填写“张三”' }), s.browser, s.jev);
+  await act(options({ op: 'fill', instruction: 'set “Name” to “Jane Doe”' }), s.browser, s.jev);
   assert.equal(s.requests.length, 1);
   assert.deepEqual(Object.keys(s.requests[0].questions).sort(), ['target', 'value']);
-  assert.deepEqual(s.commands.at(-1).args, ['fill', '@e2', '张三']);
+  assert.deepEqual(s.commands.at(-1).args, ['fill', '@e2', 'Jane Doe']);
 });
 
-test('缺少参数立即停止，未知操作与协议不放行', async () => {
+test('missing arguments stop at once; unknown operations and protocols are refused', async () => {
   const s = setup({ target: 'e2' });
   await assert.rejects(act(options({ op: 'fill' }), s.browser, s.jev), { code: 'NEEDS_INPUT' });
   assert.equal(s.commands.length, 0);
   assert.throws(() => command('open', { value: 'javascript:alert(1)' }), { code: 'INVALID_VALUE' });
   assert.throws(() => command('press', { value: 'invented' }), { code: 'INVALID_VALUE' });
-  assert.deepEqual(quotedValues('填写“”和“ A ”'), ['', ' A ']);
+  assert.deepEqual(quotedValues('fill “” and “ A ”'), ['', ' A ']);
 });
 
-test('超过单题上限的候选全部保留，交由模型层分批', () => {
+test('candidates above the per-question limit are all kept and batched by the model layer', () => {
   const observation = snapshot(data());
   observation.candidates = Array.from({ length: 254 }, (_, i) => ({ ...observation.candidates[0], ref: `e${i}` }));
   assert.equal(candidatesFor(observation, 'click').length, 254);
 });
 
-test('解析带 checked、expanded 等状态的真实上游 ref 格式', () => {
+test('parses the real upstream ref format with states like checked and expanded', () => {
   const d = data();
-  d.snapshot = '- checkbox "协议" [checked=false, ref=e1]\n- combobox "人数" [expanded=false, ref=e2]: 1人';
+  d.snapshot = '- checkbox "Agreement" [checked=false, ref=e1]\n- combobox "Guests" [expanded=false, ref=e2]: 1 guest';
   d.refs.e1.role = 'checkbox'; d.refs.e2.role = 'combobox';
   const parsed = snapshot(d);
   assert.deepEqual(parsed.candidates.map(c => c.ref), ['e1', 'e2']);
   assert.equal(candidatesFor(parsed, 'check')[0].ref, 'e1');
 });
 
-test('日期填写选择整个原生控件，排除内部年月日片段', () => {
+test('date fill picks the whole native control, not its inner year, month and day parts', () => {
   const d = data();
-  d.snapshot = '- Date "离店日期" [ref=e1]: 2026-10-12\n  - spinbutton "年" [ref=e2]: 2026\n- spinbutton "房间数量" [ref=e3]: 1';
-  d.refs.e1 = { role: 'Date', name: '离店日期', backendNodeId: 1 };
-  d.refs.e2 = { role: 'spinbutton', name: '年', backendNodeId: 2 };
-  d.refs.e3 = { role: 'spinbutton', name: '房间数量', backendNodeId: 3 };
+  d.snapshot = '- Date "Check-out date" [ref=e1]: 2026-10-12\n  - spinbutton "Year" [ref=e2]: 2026\n- spinbutton "Number of rooms" [ref=e3]: 1';
+  d.refs.e1 = { role: 'Date', name: 'Check-out date', backendNodeId: 1 };
+  d.refs.e2 = { role: 'spinbutton', name: 'Year', backendNodeId: 2 };
+  d.refs.e3 = { role: 'spinbutton', name: 'Number of rooms', backendNodeId: 3 };
   assert.deepEqual(candidatesFor(snapshot(d), 'fill').map(c => c.ref), ['e1', 'e3']);
 });
 
-test('参数解析保留值、全局作用域，并防止把参数值 act 当命令', () => {
-  const p = parseArgs(['page', 'act', 'act', '--op', 'fill', '姓名', '--value', '--json', '--json']);
+test('argument parsing keeps values and global scope, and does not treat a value of act as a command', () => {
+  const p = parseArgs(['page', 'act', 'act', '--op', 'fill', 'Name', '--value', '--json', '--json']);
   assert.equal(p.session, 'act'); assert.equal(p.options.value, '--json'); assert.equal(p.json, true);
   assert.equal(parseArgs(['element', 'fill', 'demo', '#name', 'act']).name, 'fill');
   assert.equal(parseArgs(['--restore', 'saved-login', 'page', 'snapshot', 'demo']).name, 'snapshot');
-  assert.equal(parseArgs(['--restore', 'page', 'act', 'demo', '--op', 'click', '按钮']).name, 'act');
-  assert.throws(() => parseArgs(['page', 'act', 'demo', '按钮', '--min-probability', 'oops']), { code: 'INVALID_ARGUMENT' });
+  assert.equal(parseArgs(['--restore', 'page', 'act', 'demo', '--op', 'click', 'button']).name, 'act');
+  assert.throws(() => parseArgs(['page', 'act', 'demo', 'button', '--min-probability', 'oops']), { code: 'INVALID_ARGUMENT' });
 });
 
-test('执行未知不自动再次调用', async () => {
+test('unknown execution is not retried automatically', async () => {
   const s = setup({ target: 'e1' }); let dispatched = 0;
   const original = s.browser.request;
   s.browser.request = async (args, config) => {
@@ -209,9 +209,9 @@ test('执行未知不自动再次调用', async () => {
   assert.equal(dispatched, 1);
 });
 
-test('搜索同时判断动作、输入框、清空、回车和内容，无关分支不阻塞', async () => {
+test('search judges action, input, clearing, Enter and value together; irrelevant branches do not block', async () => {
   const s = setup({ operation: 'input', input_target: 'e2', clear: 0.99, submit: 0.99, value: 'v0', target: 'ambiguous' });
-  const result = await act(options({ op: undefined, instruction: '搜索 jev' }), s.browser, s.jev);
+  const result = await act(options({ op: undefined, instruction: 'search jev' }), s.browser, s.jev);
   assert.equal(s.requests.length, 1);
   assert.equal(s.requests[0].questions.clear.type, 'noul');
   assert.equal(s.requests[0].questions.submit.type, 'noul');
@@ -223,29 +223,29 @@ test('搜索同时判断动作、输入框、清空、回车和内容，无关�
   ]);
 });
 
-test('模型决定保留旧值和不提交，显式 fill/type 保留原子行为', async () => {
+test('model decides to keep old value and not submit; explicit fill/type keep atomic behaviour', async () => {
   const s = setup({ operation: 'input', input_target: 'e2', clear: 0.01, submit: 0.01, value: 'v0' });
-  const result = await act(options({ op: undefined, instruction: '追加“jev”但不提交' }), s.browser, s.jev);
+  const result = await act(options({ op: undefined, instruction: 'append “jev” but do not submit' }), s.browser, s.jev);
   assert.equal(result.data.plan.clear, false);
   assert.equal(result.data.plan.submit, false);
   assert.deepEqual(s.commands.filter(c => c.config?.dispatch).map(c => c.args), [['type', '@e2', 'jev']]);
   for (const op of ['fill', 'type']) {
     const explicit = setup({ target: 'e2' });
-    await act(options({ op, instruction: '搜索框', value: 'jev' }), explicit.browser, explicit.jev);
+    await act(options({ op, instruction: 'Search box', value: 'jev' }), explicit.browser, explicit.jev);
     assert.equal(explicit.requests[0].questions.clear, undefined);
     assert.equal(explicit.requests[0].questions.submit, undefined);
     assert.deepEqual(explicit.commands.filter(c => c.config?.dispatch).map(c => c.args), [[op, '@e2', 'jev']]);
   }
 });
 
-test('任何相关判断未过阈值都返回待确认计划，尚未执行', async () => {
+test('any relevant judgment under threshold returns a pending plan, not run yet', async () => {
   const uncertain = choice => ({ choice, probabilities: { [choice]: 0.65, none: 0.35 } });
   for (const override of [
     { operation: { choice: 'input', probabilities: { input: 0.65, click: 0.35 } } },
     { input_target: uncertain('e2') }, { value: uncertain('v0') }, { clear: 0.6 }, { submit: 0.6 },
   ]) {
     const s = setup({ operation: 'input', input_target: 'e2', clear: 0.99, submit: 0.99, value: 'v0', ...override });
-    const plan = await prepareAct(options({ op: undefined, instruction: '搜索 jev' }), s.browser, s.jev);
+    const plan = await prepareAct(options({ op: undefined, instruction: 'search jev' }), s.browser, s.jev);
     const result = await executePlan(plan, s.browser);
     assert.equal(result.data.status, 'needs_confirmation');
     assert.equal(result.data.uncertainties.length, 1);
@@ -257,7 +257,7 @@ test('任何相关判断未过阈值都返回待确认计划，尚未执行', as
   }
 });
 
-test('确认后仍拒绝页面变化，dry-run 即使确认也不执行', async () => {
+test('page changes are refused even after confirmation; dry-run never runs even when confirmed', async () => {
   const s = setup({ target: { choice: 'e1', probabilities: { e1: 0.55, e3: 0.45 } } });
   const plan = await prepareAct(options(), s.browser, s.jev);
   const original = s.browser.request;
@@ -270,7 +270,7 @@ test('确认后仍拒绝页面变化，dry-run 即使确认也不执行', async 
   assert.equal(d.commands.filter(c => c.config?.dispatch).length, 0);
 });
 
-test('填写后页面变化或提交失败报告部分执行，不重试', async () => {
+test('page change after fill or failed submit reports partial execution without retry', async () => {
   for (const failure of ['navigation', 'submit']) {
     const s = setup({ operation: 'input', input_target: 'e2', clear: 1, submit: 1, value: 'v0' });
     let filled = false;
@@ -283,59 +283,59 @@ test('填写后页面变化或提交失败报告部分执行，不重试', async
       if (args[0] === 'press' && failure === 'submit') throw new JevError('EXECUTION_UNKNOWN', 'timeout', true);
       return original(args, config);
     };
-    await assert.rejects(act(options({ op: undefined, instruction: '搜索 jev' }), s.browser, s.jev),
+    await assert.rejects(act(options({ op: undefined, instruction: 'search jev' }), s.browser, s.jev),
       { code: failure === 'navigation' ? 'STALE_TARGET' : 'EXECUTION_UNKNOWN', dispatched: true });
     assert.equal(dispatched.filter(args => args[0] === 'fill').length, 1);
     assert.equal(dispatched.filter(args => args[0] === 'press').length, failure === 'navigation' ? 0 : 1);
   }
 });
 
-test('确认编号不可同时修改计划或阈值', () => {
+test('a confirmation id cannot be combined with plan or threshold changes', () => {
   assert.equal(parseArgs(['page', 'act', 'demo', '--confirm', 'jev-id']).options.confirm, 'jev-id');
   assert.equal(parseArgs(['page', 'act', 'demo', '--cancel', 'jev-id']).options.cancel, 'jev-id');
-  for (const extra of [['搜索别的内容'], ['--value', 'other'], ['--dry-run'], ['--scope', '#other'], ['--min-probability', '0'], ['--cancel', 'id']])
+  for (const extra of [['search something else'], ['--value', 'other'], ['--dry-run'], ['--scope', '#other'], ['--min-probability', '0'], ['--cancel', 'id']])
     assert.throws(() => parseArgs(['page', 'act', 'demo', '--confirm', 'jev-id', ...extra]), { code: 'INVALID_ARGUMENT' });
 });
 
-test('常用网站名称映射为可执行网址，显式 open 同样支持', async () => {
+test('common site names map to runnable URLs, also with explicit open', async () => {
   for (const op of [undefined, 'open']) {
     const s = setup({ operation: 'open', [op ? 'value' : 'url']: 'google' });
-    const result = await act(options({ op, instruction: '打开“谷歌”' }), s.browser, s.jev);
+    const result = await act(options({ op, instruction: 'open “Google”' }), s.browser, s.jev);
     assert.equal(result.data.plan.value, 'https://www.google.com');
     assert.deepEqual(s.commands.filter(c => c.config?.dispatch).map(c => c.args), [['open', 'https://www.google.com']]);
     assert.equal(s.requests.length, 1);
-    assert.match(s.requests[0].questions[op ? 'value' : 'url'].criteria.google, /谷歌 Google/);
+    assert.match(s.requests[0].questions[op ? 'value' : 'url'].criteria.google, /Google/);
   }
 });
 
-test('30 个内置站点都能形成有效导航计划，预览不执行', async () => {
+test('all 30 built-in sites form valid navigation plans; preview does not run', async () => {
   assert.equal(Object.keys(sites).length, 30);
   assert.equal(new Set(Object.values(sites).map(site => site.url)).size, 30);
   for (const [id, site] of Object.entries(sites)) {
     const s = setup({ operation: 'open', url: id });
-    const result = await act(options({ op: undefined, instruction: `打开${site.label}`, dryRun: true }), s.browser, s.jev);
+    const result = await act(options({ op: undefined, instruction: `open ${site.label}`, dryRun: true }), s.browser, s.jev);
     assert.equal(result.data.status, 'resolved');
     assert.equal(result.data.plan.value, site.url);
     assert.equal(s.commands.filter(c => c.config?.dispatch).length, 0);
   }
 });
 
-test('完整网址优先于常用网站，原始路径与参数保留', async () => {
+test('a full URL wins over common sites; original path and query are kept', async () => {
   const s = setup({ operation: 'open', url: 'v0' });
   const url = 'https://www.google.com/maps?q=hello';
-  await act(options({ op: undefined, instruction: `打开Google地图 ${url}` }), s.browser, s.jev);
+  await act(options({ op: undefined, instruction: `open Google Maps ${url}` }), s.browser, s.jev);
   assert.equal(s.requests[0].questions.url.criteria.google, undefined);
   assert.deepEqual(s.commands.at(-1).args, ['open', url]);
 });
 
-test('未知或歧义网站请求完整网址，低置信度匹配仍需确认', async () => {
+test('unknown or ambiguous sites ask for a full URL; low-confidence matches still need confirmation', async () => {
   for (const choice of ['none', 'ambiguous']) {
     const s = setup({ operation: 'open', url: choice });
-    await assert.rejects(act(options({ op: undefined, instruction: '打开未知网站' }), s.browser, s.jev), { code: 'NEEDS_URL' });
+    await assert.rejects(act(options({ op: undefined, instruction: 'open an unknown website' }), s.browser, s.jev), { code: 'NEEDS_URL' });
     assert.equal(s.commands.filter(c => c.config?.dispatch).length, 0);
   }
   const s = setup({ operation: 'open', url: { choice: 'google', probabilities: { google: 0.6, none: 0.4 } } });
-  const plan = await prepareAct(options({ op: undefined, instruction: '打开Google' }), s.browser, s.jev);
+  const plan = await prepareAct(options({ op: undefined, instruction: 'open Google' }), s.browser, s.jev);
   assert.equal((await executePlan(plan, s.browser)).data.status, 'needs_confirmation');
   assert.equal(s.commands.filter(c => c.config?.dispatch).length, 0);
   await executePlan(plan, s.browser, true);
@@ -350,24 +350,24 @@ function missingTab(selections, failure) {
     const result = await original(args, config);
     if (failure) throw failure;
     return { ...result, pageContext: { session: 'demo', tabId: 't2', targetId: 'new-target',
-      title: '百度', url: 'https://www.baidu.com' } };
+      title: 'Baidu', url: 'https://www.baidu.com' } };
   };
   return s;
 }
 
-test('绑定页关闭后打开网页只新建一次，预览不会创建标签页', async () => {
+test('opening a page after the bound tab closes creates one tab only; preview creates none', async () => {
   for (const dryRun of [false, true]) {
     const s = missingTab({ operation: 'open', url: 'baidu' });
-    const result = await act(options({ op: undefined, instruction: '打开baidu', dryRun }), s.browser, s.jev);
+    const result = await act(options({ op: undefined, instruction: 'open baidu', dryRun }), s.browser, s.jev);
     assert.equal(result.data.status, dryRun ? 'resolved' : 'executed');
     assert.equal(result.data.plan.newTab, true);
-    assert.equal(result.data.plan.page, '新标签页');
+    assert.equal(result.data.plan.page, 'New tab');
     assert.deepEqual(s.commands.map(c => c.args), dryRun ? [] : [['tab', 'new', 'https://www.baidu.com']]);
     if (!dryRun) assert.equal(result.data.pageContext.tabId, 't2');
   }
 });
 
-test('绑定页关闭后点击、填写和其他页面操作仍失败', async () => {
+test('click, fill and other page actions still fail after the bound tab closes', async () => {
   for (const [op, selected] of [['click', 'click'], ['fill', 'input'], [undefined, 'click'], [undefined, 'input']]) {
     const s = missingTab({ operation: selected });
     await assert.rejects(act(options({ op, value: op === 'fill' ? 'hello' : undefined }), s.browser, s.jev),
@@ -376,24 +376,24 @@ test('绑定页关闭后点击、填写和其他页面操作仍失败', async ()
   }
 });
 
-test('缺页新建计划仍需确认低置信度网址，保存后确认只执行一次', async () => {
+test('new-tab plans still confirm low-confidence URLs; once saved, confirmation runs only once', async () => {
   const s = missingTab({ operation: 'open', url: { choice: 'baidu', probabilities: { baidu: .6, none: .4 } } });
-  const plan = await prepareAct(options({ op: undefined, instruction: '打开百度' }), s.browser, s.jev);
+  const plan = await prepareAct(options({ op: undefined, instruction: 'open Baidu' }), s.browser, s.jev);
   assert.equal((await executePlan(plan, s.browser)).data.status, 'needs_confirmation');
   assert.deepEqual(s.commands, []);
   await executePlan(JSON.parse(JSON.stringify(plan)), s.browser, true);
   assert.deepEqual(s.commands.map(c => c.args), [['tab', 'new', 'https://www.baidu.com']]);
 });
 
-test('缺页恢复失败不重放，其他连接错误和非法网址不会触发新建', async () => {
+test('failed new-tab recovery is not replayed; other connection errors and invalid URLs do not create a tab', async () => {
   const s = missingTab({ operation: 'open', url: 'baidu' }, new JevError('EXECUTION_UNKNOWN', 'connection closed', true));
-  await assert.rejects(act(options({ op: undefined, instruction: '打开百度' }), s.browser, s.jev), { code: 'EXECUTION_UNKNOWN' });
+  await assert.rejects(act(options({ op: undefined, instruction: 'open Baidu' }), s.browser, s.jev), { code: 'EXECUTION_UNKNOWN' });
   assert.equal(s.commands.length, 1);
   const invalid = missingTab({});
   await assert.rejects(act(options({ op: 'open', value: 'javascript:alert(1)' }), invalid.browser, invalid.jev), { code: 'INVALID_VALUE' });
   assert.deepEqual(invalid.commands, []);
   const failed = setup({ operation: 'open', url: 'baidu' });
   failed.browser.request = async () => { throw new JevError('BROWSER_ERROR', 'Chrome rejected the connection'); };
-  await assert.rejects(act(options({ op: undefined, instruction: '打开百度' }), failed.browser, failed.jev), /Chrome rejected/);
+  await assert.rejects(act(options({ op: undefined, instruction: 'open Baidu' }), failed.browser, failed.jev), /Chrome rejected/);
   assert.equal(failed.requests.length, 0);
 });

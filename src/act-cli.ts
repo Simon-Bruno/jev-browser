@@ -15,7 +15,7 @@ async function askUrl(): Promise<string | undefined> {
   input.once('SIGINT', () => cancel.abort());
   input.once('close', () => cancel.abort());
   try {
-    const value = (await input.question('请输入完整网址（如 https://example.com，直接回车取消）：', { signal: cancel.signal })
+    const value = (await input.question('Enter a full URL (e.g. https://example.com, press Enter to cancel): ', { signal: cancel.signal })
       .catch(error => { if (cancel.signal.aborted) return ''; throw error; })).trim();
     if (!value) return;
     command('open', { value });
@@ -25,25 +25,25 @@ async function askUrl(): Promise<string | undefined> {
 
 export function formatAct(result: Result): string {
   const { status, plan, uncertainties, session, pageContext } = result.data;
-  const lines = [status === 'needs_confirmation' ? '需要你确认，尚未执行。' : status === 'resolved' ? '操作预览，尚未执行。' : status === 'cancelled' ? '已取消，尚未执行。' : '操作已执行。'];
-  if (session) lines.push(`会话：${session}`);
-  if (plan.tabId) lines.push(`标签页：${plan.tabId}`);
-  if (plan.title !== undefined) lines.push(`标题：${plan.title || '（无标题）'}`);
-  lines.push(`页面：${plan.page}`, `操作：${plan.action}`);
-  if (plan.target) lines.push(`目标：${plan.target}`);
-  if (plan.value !== undefined) lines.push(`内容：${JSON.stringify(plan.value)}`);
-  if (plan.clear !== undefined) lines.push(`原有内容：${plan.clear ? '清空后填写' : '保留并追加'}`, `输入后：${plan.submit ? '按回车提交' : '不提交'}`);
+  const lines = [status === 'needs_confirmation' ? 'Needs your confirmation, not run yet.' : status === 'resolved' ? 'Action preview, not run yet.' : status === 'cancelled' ? 'Cancelled, not run.' : 'Action done.'];
+  if (session) lines.push(`Session: ${session}`);
+  if (plan.tabId) lines.push(`Tab: ${plan.tabId}`);
+  if (plan.title !== undefined) lines.push(`Title: ${plan.title || '(untitled)'}`);
+  lines.push(`Page: ${plan.page}`, `Action: ${plan.action}`);
+  if (plan.target) lines.push(`Target: ${plan.target}`);
+  if (plan.value !== undefined) lines.push(`Value: ${JSON.stringify(plan.value)}`);
+  if (plan.clear !== undefined) lines.push(`Existing text: ${plan.clear ? 'clear, then fill' : 'keep and append'}`, `After typing: ${plan.submit ? 'press Enter to submit' : 'do not submit'}`);
   if (status === 'needs_confirmation') {
     for (const issue of uncertainties) {
-      lines.push(`原因：${issue.message}`);
-      if (issue.alternatives.length > 1) lines.push(`可能的理解：${issue.alternatives.map(a => `${a.label}（${Math.round(a.probability * 100)}%）`).join('；')}`);
+      lines.push(`Reason: ${issue.message}`);
+      if (issue.alternatives.length > 1) lines.push(`Possible meanings: ${issue.alternatives.map(a => `${a.label} (${Math.round(a.probability * 100)}%)`).join('; ')}`);
     }
-    if (result.confirmation) lines.push('确认后只执行上面这份计划，有效期 5 分钟。',
-      `执行：${result.confirmation.confirmCommand}`, `取消：${result.confirmation.cancelCommand}`);
+    if (result.confirmation) lines.push('Confirming runs only the plan above. It expires in 5 minutes.',
+      `Run: ${result.confirmation.confirmCommand}`, `Cancel: ${result.confirmation.cancelCommand}`);
   }
   if (result.data.result !== undefined) lines.push(JSON.stringify(result.data.result));
   if (status === 'executed' && pageContext && (pageContext.tabId !== plan.tabId || pageContext.url !== plan.page || pageContext.title !== plan.title))
-    lines.push(`当前标签页：${pageContext.tabId}`, `当前标题：${pageContext.title || '（无标题）'}`, `当前页面：${pageContext.url}`);
+    lines.push(`Current tab: ${pageContext.tabId}`, `Current title: ${pageContext.title || '(untitled)'}`, `Current page: ${pageContext.url}`);
   return lines.join('\n') + '\n';
 }
 
@@ -70,7 +70,7 @@ export async function runAct(options: ActOptions, browser: Browser, context: { s
     }
     process.stdout.write(error.message + '\n');
     const value = await askUrl();
-    if (!value) { process.stdout.write('已取消，尚未执行。\n'); return; }
+    if (!value) { process.stdout.write('Cancelled, not run.\n'); return; }
     plan = await prepareAct({ ...options, op: 'open', value }, browser, jev);
   }
   const result: Result = await executePlan(plan, browser);
@@ -92,11 +92,11 @@ export async function runAct(options: ActOptions, browser: Browser, context: { s
   input.once('SIGINT', () => cancel.abort());
   input.once('close', () => cancel.abort());
   try {
-    const answer = await input.question('是否执行？[y/N] ', { signal: cancel.signal }).catch(error => {
+    const answer = await input.question('Execute? [y/N] ', { signal: cancel.signal }).catch(error => {
       if (cancel.signal.aborted) return 'n';
       throw error;
     });
     const saved = await takePending(pending.id, context.session);
-    print(/^(y|yes|是|执行)$/i.test(answer.trim()) ? await executePlan(saved, browser, true) : planResult(saved, 'cancelled'));
+    print(/^(y|yes)$/i.test(answer.trim()) ? await executePlan(saved, browser, true) : planResult(saved, 'cancelled'));
   } finally { input.close(); }
 }

@@ -153,7 +153,7 @@ export class Browser {
     if (command[0] === 'open' || command[0] === 'goto' || command[0] === 'navigate') {
       let result = await this.run(command);
       if (result.code !== 0 && /Chrome not found\. Checked:/.test(result.stdout + result.stderr)) {
-        process.stderr.write('首次启动：正在下载 Chrome for Testing。\n');
+        process.stderr.write('First launch: downloading Chrome for Testing.\n');
         await withSession('browser-install', async () => {
           const install = await this.run(['install'], { progress: true });
           if (install.code !== 0) throw new JevError('BROWSER_INSTALL_FAILED', 'Browser download failed. Check the network, certificates, and directory permissions.');
